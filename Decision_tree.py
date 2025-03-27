@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from sklearn.tree import DecisionTreeClassifier
+from sklearn.tree import DecisionTreeClassifier, plot_tree
 from sklearn.model_selection import KFold, GridSearchCV
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import confusion_matrix, precision_score, recall_score, f1_score
@@ -97,6 +97,12 @@ class DecisionTreeCKD:
         plt.xlabel("Importance")
         plt.ylabel("Feature")
         plt.show()
+        
+        plt.figure(figsize=(15, 10))
+        plot_tree(model, feature_names=X.columns, class_names=["Not CKD", "CKD"], filled=True)
+        plt.title("Decision Tree Visualization")
+        plt.show()
+        
         print("[INFO] Visualizations generated.")
 
 file_path = "/home/r1ddh1/2nd_year/pbl_sem4/processed_data.csv"
