@@ -8,7 +8,7 @@ from catboost import CatBoostClassifier
 from sklearn.model_selection import RandomizedSearchCV
 import numpy as np
 
-class CatBoostModel:
+class CatBoostCKDModel:
     def __init__(self, file_path, params=None):
         self.file_path = file_path
         self.df = pd.read_csv(self.file_path)
@@ -21,12 +21,16 @@ class CatBoostModel:
         self.y_test = None
 
     def preprocess_data(self):
-        self.df = self.df.drop(['affected', 'age_avg'], axis=1)
+        self.df = self.df.drop(['affected', 'age_avg'], axis=1)  # Removing unnecessary columns
+        
+        # Encoding categorical variables
         le = LabelEncoder()
-        self.df['class'] = le.fit_transform(self.df['class'])
-        self.df['grf'] = le.fit_transform(self.df['grf'])
+        self.df['class'] = le.fit_transform(self.df['class'])  # Target variable encoding
+        self.df['grf'] = pd.to_numeric(self.df['grf'], errors='coerce')  # Convert GRF to numeric
+        
         X = self.df.drop('class', axis=1)
         y = self.df['class']
+        
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
     def hyperparameter_tuning(self):
@@ -36,7 +40,9 @@ class CatBoostModel:
             'learning_rate': [0.01, 0.05, 0.1, 0.2],
             'l2_leaf_reg': [1, 3, 5, 7]
         }
-        random_search = RandomizedSearchCV(CatBoostClassifier(loss_function='Logloss', verbose=0), param_distributions=param_dist, n_iter=10, cv=3, scoring='roc_auc', n_jobs=-1, random_state=42)
+        random_search = RandomizedSearchCV(CatBoostClassifier(loss_function='Logloss', verbose=0), 
+                                           param_distributions=param_dist, n_iter=10, cv=3, 
+                                           scoring='roc_auc', n_jobs=-1, random_state=42)
         random_search.fit(self.X_train, self.y_train)
         print("Best parameters found: ", random_search.best_params_)
         self.model = CatBoostClassifier(**random_search.best_params_, loss_function='Logloss', verbose=100)
@@ -115,7 +121,7 @@ class CatBoostModel:
         plt.show()
 
 if __name__ == "__main__":
-    model = CatBoostModel("ckd_prediction_dataset.csv")
+    model = CatBoostCKDModel("ckd_prediction_dataset.csv")
     model.preprocess_data()
     model.hyperparameter_tuning()
     model.train()
