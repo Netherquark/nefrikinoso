@@ -1,120 +1,78 @@
-import numpy as np
 import pandas as pd
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report, roc_auc_score
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import KFold, GridSearchCV
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import confusion_matrix, classification_report, roc_curve, auc
 
-class CKDLogisticRegression:
-    def __init__(self, dataset_path, target_column='class', k=5):
-        self.dataset_path = dataset_path
-        self.target_column = target_column
-        self.k = k
-        self.dataset = None
-        self.model = LogisticRegression(solver='liblinear', C=1)
-        self.scaler = StandardScaler()
-    
-    def load_data(self):
-        self.dataset = pd.read_csv(self.dataset_path)
-        
-        # Drop irrelevant columns
-        self.dataset.drop(columns=['affected', 'grf', 'age_avg'], inplace=True)
-        
-        # Binary encoding of target
-        self.dataset[self.target_column] = (self.dataset[self.target_column] == 'ckd').astype(int)
-    
+class LogisticRegressionModel:
+    def __init__(self, file_path):
+        self.file_path = file_path
+        self.df = pd.read_csv(file_path)
+        self.model = None
+
     def preprocess_data(self):
-        X = self.dataset.drop(columns=[self.target_column])
-        y = self.dataset[self.target_column]
-        X_scaled = self.scaler.fit_transform(X)
-        return X_scaled, y, X.columns
-    
-    def hyperparameter_tuning(self, X, y):
-        param_grid = {'C': [0.01, 0.1, 1, 10, 100]}
-        grid_search = GridSearchCV(LogisticRegression(solver='liblinear'), param_grid, cv=self.k, scoring='accuracy')
-        grid_search.fit(X, y)
-        self.model = LogisticRegression(solver='liblinear', C=grid_search.best_params_['C'])
-    
-    def train_evaluate(self):
-        X, y, feature_names = self.preprocess_data()
-        self.hyperparameter_tuning(X, y)
-        kf = KFold(n_splits=self.k, shuffle=True, random_state=42)
-        accuracies, sensitivities, specificities = [], [], []
-        all_y_test, all_y_pred, all_y_scores = [], [], []
-        
-        for train_index, test_index in kf.split(X):
-            X_train, X_test = X[train_index], X[test_index]
-            y_train, y_test = y.iloc[train_index], y.iloc[test_index]
-            
-            self.model.fit(X_train, y_train)
-            y_pred = self.model.predict(X_test)
-            y_scores = self.model.predict_proba(X_test)[:, 1]
-            
-            cm = confusion_matrix(y_test, y_pred)
-            tn, fp, fn, tp = cm.ravel()
-            
-            accuracy = (tp + tn) / (tp + tn + fp + fn)
-            sensitivity = tp / (tp + fn) if (tp + fn) > 0 else 0
-            specificity = tn / (tn + fp) if (tn + fp) > 0 else 0
-            
-            accuracies.append(accuracy)
-            sensitivities.append(sensitivity)
-            specificities.append(specificity)
-            
-            all_y_test.extend(y_test)
-            all_y_pred.extend(y_pred)
-            all_y_scores.extend(y_scores)
-        
-        mean_accuracy = np.mean(accuracies)
-        mean_sensitivity = np.mean(sensitivities)
-        mean_specificity = np.mean(specificities)
-        
-        print("\nModel Performance:")
-        print("-----------------")
-        print(f"Mean Accuracy: {mean_accuracy:.4f} ({mean_accuracy * 100:.2f}%)")
-        print(f"Mean Sensitivity (Recall): {mean_sensitivity:.4f} ({mean_sensitivity * 100:.2f}%)")
-        print(f"Mean Specificity: {mean_specificity:.4f} ({mean_specificity * 100:.2f}%)\n")
-        
-        self.visualize_results(np.array(all_y_test), np.array(all_y_pred), np.array(all_y_scores), feature_names)
-    
-    def visualize_results(self, y_test, y_pred, y_scores, feature_names):
-        print("Classification Report:\n", classification_report(y_test, y_pred))
-        
-        # Confusion Matrix
-        cm = confusion_matrix(y_test, y_pred)
-        sns.heatmap(cm, annot=True, fmt="d", cmap="Blues")
-        plt.title("Confusion Matrix")
+        columns_to_drop = [col for col in ['affected', 'age_avg'] if col in self.df.columns]
+        self.df.drop(columns=columns_to_drop, axis=1, inplace=True)
+
+        le = LabelEncoder()
+        if self.df['class'].dtype == 'object':
+            self.df['class'] = le.fit_transform(self.df['class'])
+        if self.df['grf'].dtype == 'object':
+            self.df['grf'] = le.fit_transform(self.df['grf'])
+
+        self.X = self.df.drop('class', axis=1)
+        self.y = self.df['class']
+
+    def train_test_split(self, test_size=0.2, random_state=42):
+        scaler = StandardScaler()
+        self.X_scaled = scaler.fit_transform(self.X)
+        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
+            self.X_scaled, self.y, test_size=test_size, random_state=random_state
+        )
+
+    def train_model(self):
+        param_grid = {
+            'C': [0.01, 0.1, 1, 10],
+            'solver': ['lbfgs', 'liblinear'],
+            'penalty': ['l2']
+        }
+
+        lr = LogisticRegression(random_state=42, max_iter=1000)
+        grid_search = GridSearchCV(lr, param_grid, cv=5, scoring='roc_auc', n_jobs=-1)
+        grid_search.fit(self.X_train, self.y_train)
+        self.model = grid_search.best_estimator_
+
+        print("\n Best Parameters Found for Logistic Regression:")
+        print(grid_search.best_params_)
+
+    def evaluate_model(self, return_scores=False):
+        y_pred = self.model.predict(self.X_test)
+        y_proba = self.model.predict_proba(self.X_test)[:, 1]
+
+        accuracy = accuracy_score(self.y_test, y_pred)
+        roc_auc = roc_auc_score(self.y_test, y_proba)
+
+        if return_scores:
+            return {
+                "Accuracy": accuracy,
+                "ROC_AUC": roc_auc
+            }
+
+        print(f"\n Model Evaluation for Logistic Regression:")
+        print(f"Accuracy: {accuracy:.4f}")
+        print("Confusion Matrix:\n", confusion_matrix(self.y_test, y_pred))
+        print("Classification Report:\n", classification_report(self.y_test, y_pred))
+        print(f"ROC AUC Score: {roc_auc:.4f}")
+
+        self.visualize_results(y_pred)
+
+    def visualize_results(self, y_pred):
+        plt.figure(figsize=(6, 4))
+        sns.heatmap(confusion_matrix(self.y_test, y_pred), annot=True, fmt='d', cmap='Purples')
+        plt.title("Confusion Matrix - Logistic Regression")
         plt.xlabel("Predicted")
         plt.ylabel("Actual")
+        plt.tight_layout()
         plt.show()
-        
-        # ROC Curve
-        fpr, tpr, _ = roc_curve(y_test, y_scores)
-        auc_score = auc(fpr, tpr)
-        plt.plot(fpr, tpr, label=f"AUC = {auc_score:.2f}", color="darkorange")
-        plt.plot([0, 1], [0, 1], linestyle='--', color='gray')
-        plt.xlabel("False Positive Rate")
-        plt.ylabel("True Positive Rate")
-        plt.title("ROC Curve")
-        plt.legend()
-        plt.show()
-        
-        # Feature Importance (Coefficients)
-        coef = self.model.coef_.flatten()
-        importance_df = pd.DataFrame({'Feature': feature_names, 'Coefficient': coef})
-        importance_df['AbsCoef'] = importance_df['Coefficient'].abs()
-        importance_df.sort_values(by='AbsCoef', ascending=False, inplace=True)
-
-        sns.barplot(x='AbsCoef', y='Feature', data=importance_df, palette='viridis')
-        plt.title("Feature Importance (Logistic Regression Coefficients)")
-        plt.xlabel("Absolute Coefficient Value")
-        plt.ylabel("Feature")
-        plt.show()
-
-# Usage Example
-dataset_path = "/home/r1ddh1/2nd_year/pbl_sem4/processed_data.csv"
-ckd_model = CKDLogisticRegression(dataset_path)
-ckd_model.load_data()
-ckd_model.train_evaluate()
