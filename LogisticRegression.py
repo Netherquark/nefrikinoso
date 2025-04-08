@@ -19,17 +19,17 @@ class CKDLogisticRegression:
     def load_data(self):
         self.dataset = pd.read_csv(self.dataset_path)
         
-        # Remove redundant columns
+        # Drop irrelevant columns
         self.dataset.drop(columns=['affected', 'grf', 'age_avg'], inplace=True)
         
-        # Convert target column to binary values
+        # Binary encoding of target
         self.dataset[self.target_column] = (self.dataset[self.target_column] == 'ckd').astype(int)
     
     def preprocess_data(self):
         X = self.dataset.drop(columns=[self.target_column])
         y = self.dataset[self.target_column]
         X_scaled = self.scaler.fit_transform(X)
-        return X_scaled, y
+        return X_scaled, y, X.columns
     
     def hyperparameter_tuning(self, X, y):
         param_grid = {'C': [0.01, 0.1, 1, 10, 100]}
@@ -38,7 +38,7 @@ class CKDLogisticRegression:
         self.model = LogisticRegression(solver='liblinear', C=grid_search.best_params_['C'])
     
     def train_evaluate(self):
-        X, y = self.preprocess_data()
+        X, y, feature_names = self.preprocess_data()
         self.hyperparameter_tuning(X, y)
         kf = KFold(n_splits=self.k, shuffle=True, random_state=42)
         accuracies, sensitivities, specificities = [], [], []
@@ -77,42 +77,41 @@ class CKDLogisticRegression:
         print(f"Mean Sensitivity (Recall): {mean_sensitivity:.4f} ({mean_sensitivity * 100:.2f}%)")
         print(f"Mean Specificity: {mean_specificity:.4f} ({mean_specificity * 100:.2f}%)\n")
         
-        self.visualize_results(np.array(all_y_test), np.array(all_y_pred), np.array(all_y_scores))
+        self.visualize_results(np.array(all_y_test), np.array(all_y_pred), np.array(all_y_scores), feature_names)
     
-    def visualize_results(self, y_test, y_pred, y_scores):
-        cm = confusion_matrix(y_test, y_pred)
+    def visualize_results(self, y_test, y_pred, y_scores, feature_names):
+        print("Classification Report:\n", classification_report(y_test, y_pred))
         
-        # Confusion Matrix Visualization
-        plt.figure(figsize=(6, 5))
-        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=['No CKD', 'CKD'], yticklabels=['No CKD', 'CKD'])
-        plt.xlabel('Predicted')
-        plt.ylabel('Actual')
-        plt.title('Confusion Matrix')
+        # Confusion Matrix
+        cm = confusion_matrix(y_test, y_pred)
+        sns.heatmap(cm, annot=True, fmt="d", cmap="Blues")
+        plt.title("Confusion Matrix")
+        plt.xlabel("Predicted")
+        plt.ylabel("Actual")
         plt.show()
         
         # ROC Curve
         fpr, tpr, _ = roc_curve(y_test, y_scores)
-        roc_auc = auc(fpr, tpr)
-        plt.figure(figsize=(8, 6))
-        plt.plot(fpr, tpr, color='blue', lw=2, label=f'ROC Curve (AUC = {roc_auc:.2f})')
-        plt.plot([0, 1], [0, 1], color='gray', linestyle='--')
-        plt.xlabel('False Positive Rate')
-        plt.ylabel('True Positive Rate')
-        plt.title('Receiver Operating Characteristic (ROC) Curve')
+        auc_score = auc(fpr, tpr)
+        plt.plot(fpr, tpr, label=f"AUC = {auc_score:.2f}", color="darkorange")
+        plt.plot([0, 1], [0, 1], linestyle='--', color='gray')
+        plt.xlabel("False Positive Rate")
+        plt.ylabel("True Positive Rate")
+        plt.title("ROC Curve")
         plt.legend()
         plt.show()
         
-        # Feature Importance Visualization
-        feature_importance = pd.DataFrame({'Feature': self.dataset.drop(columns=[self.target_column]).columns,
-                                           'Coefficient': self.model.coef_[0]})
-        feature_importance = feature_importance.sort_values(by='Coefficient', ascending=False)
-        
-        plt.figure(figsize=(10, 6))
-        sns.barplot(x='Coefficient', y='Feature', data=feature_importance, palette='coolwarm')
-        plt.title("Feature Importance in Logistic Regression")
+        # Feature Importance (Coefficients)
+        coef = self.model.coef_.flatten()
+        importance_df = pd.DataFrame({'Feature': feature_names, 'Coefficient': coef})
+        importance_df['AbsCoef'] = importance_df['Coefficient'].abs()
+        importance_df.sort_values(by='AbsCoef', ascending=False, inplace=True)
+
+        sns.barplot(x='AbsCoef', y='Feature', data=importance_df, palette='viridis')
+        plt.title("Feature Importance (Logistic Regression Coefficients)")
+        plt.xlabel("Absolute Coefficient Value")
+        plt.ylabel("Feature")
         plt.show()
-        
-        print("Classification Report:\n", classification_report(y_test, y_pred))
 
 # Usage Example
 dataset_path = "/home/r1ddh1/2nd_year/pbl_sem4/processed_data.csv"
