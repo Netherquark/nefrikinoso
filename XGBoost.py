@@ -1,11 +1,10 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split, GridSearchCV
-from sklearn.preprocessing import LabelEncoder
-from sklearn.metrics import accuracy_score, confusion_matrix, classification_report, roc_auc_score, roc_curve
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report, roc_auc_score
 import xgboost as xgb
 import matplotlib.pyplot as plt
 import seaborn as sns
-import numpy as np
 
 class XGBoostModel:
     def __init__(self, file_path):
@@ -14,33 +13,35 @@ class XGBoostModel:
         self.model = None
 
     def preprocess_data(self):
-        # Drop unwanted columns
-        self.df = self.df.drop(['affected', 'age_avg'], axis=1)
+        columns_to_drop = [col for col in ['affected', 'age_avg'] if col in self.df.columns]
+        self.df = self.df.drop(columns=columns_to_drop, axis=1)
 
-        # Encode categorical columns
         le = LabelEncoder()
-        self.df['class'] = le.fit_transform(self.df['class'])
-        self.df['grf'] = le.fit_transform(self.df['grf'])
+        if self.df['class'].dtype == 'object':
+            self.df['class'] = le.fit_transform(self.df['class'])
+        if self.df['grf'].dtype == 'object':
+            self.df['grf'] = le.fit_transform(self.df['grf'])
 
-        # Split features and target
         self.X = self.df.drop('class', axis=1)
         self.y = self.df['class']
 
-        # Train-test split
+    def train_test_split(self, test_size=0.2, random_state=42):
+        scaler = StandardScaler()
+        self.X_scaled = scaler.fit_transform(self.X)
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
-            self.X, self.y, test_size=0.2, random_state=42
+            self.X_scaled, self.y, test_size=test_size, random_state=random_state
         )
 
     def train_model(self):
         param_grid = {
-            'n_estimators': [50, 100, 150],
-            'max_depth': [3, 4, 5],
-            'learning_rate': [0.01, 0.1, 0.2],
-            'subsample': [0.7, 0.8, 0.9],
-            'colsample_bytree': [0.7, 0.8, 0.9]
+            'n_estimators': [50, 100],
+            'max_depth': [3, 4],
+            'learning_rate': [0.01, 0.1],
+            'subsample': [0.8],
+            'colsample_bytree': [0.8]
         }
 
-        xgb_clf = xgb.XGBClassifier(objective='binary:logistic', random_state=42)
+        xgb_clf = xgb.XGBClassifier(objective='binary:logistic', random_state=42, use_label_encoder=False, eval_metric='logloss')
 
         grid_search = GridSearchCV(
             estimator=xgb_clf,
@@ -54,63 +55,35 @@ class XGBoostModel:
         grid_search.fit(self.X_train, self.y_train)
         self.model = grid_search.best_estimator_
 
-        print("\n Best Parameters:", grid_search.best_params_)
+        print("\n Best Parameters Found for XGBoost:")
+        print(grid_search.best_params_)
 
-    def evaluate_model(self):
+    def evaluate_model(self, return_scores=False):
         y_pred = self.model.predict(self.X_test)
         y_proba = self.model.predict_proba(self.X_test)[:, 1]
 
-        # Print evaluation metrics
         accuracy = accuracy_score(self.y_test, y_pred)
-        confusion = confusion_matrix(self.y_test, y_pred)
-        classification = classification_report(self.y_test, y_pred)
         roc_auc = roc_auc_score(self.y_test, y_proba)
 
-        print("\n Accuracy:", accuracy)
-        print("\n Confusion Matrix:\n", confusion)
-        print("\n Classification Report:\n", classification)
-        print("\n ROC AUC Score:", roc_auc)
+        if return_scores:
+            return {
+                "Accuracy": accuracy,
+                "ROC_AUC": roc_auc
+            }
 
-        # Visualizations
-        self.visualize_results(y_pred, y_proba)
+        print(f"\n Model Evaluation for XGBoost:")
+        print(f"Accuracy: {accuracy:.4f}")
+        print("Confusion Matrix:\n", confusion_matrix(self.y_test, y_pred))
+        print("Classification Report:\n", classification_report(self.y_test, y_pred))
+        print(f"ROC AUC Score: {roc_auc:.4f}")
 
-    def visualize_results(self, y_pred, y_proba):
-        # Confusion Matrix
+        self.visualize_results(y_pred)
+
+    def visualize_results(self, y_pred):
         plt.figure(figsize=(6, 4))
-        sns.heatmap(confusion_matrix(self.y_test, y_pred), annot=True, fmt="d", cmap="Blues")
-        plt.title("Confusion Matrix")
+        sns.heatmap(confusion_matrix(self.y_test, y_pred), annot=True, fmt='d', cmap='Oranges')
+        plt.title("Confusion Matrix - XGBoost")
         plt.xlabel("Predicted")
         plt.ylabel("Actual")
+        plt.tight_layout()
         plt.show()
-
-        # ROC Curve
-        fpr, tpr, _ = roc_curve(self.y_test, y_proba)
-        plt.figure(figsize=(6, 4))
-        plt.plot(fpr, tpr, label="ROC Curve", color="darkorange")
-        plt.plot([0, 1], [0, 1], linestyle='--', color='gray')
-        plt.xlabel("False Positive Rate")
-        plt.ylabel("True Positive Rate")
-        plt.title("ROC Curve")
-        plt.legend()
-        plt.show()
-
-        # Feature Importance
-        if hasattr(self.model, "feature_importances_"):
-            importances = self.model.feature_importances_
-            features = self.X.columns
-            indices = np.argsort(importances)[::-1]
-            plt.figure(figsize=(10, 6))
-            sns.barplot(x=importances[indices], y=np.array(features)[indices], palette="viridis")
-            plt.title("Feature Importance")
-            plt.xlabel("Importance Score")
-            plt.ylabel("Features")
-            plt.show()
-        else:
-            print(" Feature importance not available for this model.")
-
-
-if __name__ == "__main__":
-    model = XGBoostModel('ckd_prediction_dataset.csv')
-    model.preprocess_data()
-    model.train_model()
-    model.evaluate_model()
