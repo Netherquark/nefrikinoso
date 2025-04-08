@@ -2,10 +2,13 @@ import pandas as pd
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.svm import SVC
-from sklearn.metrics import accuracy_score, confusion_matrix, classification_report, roc_auc_score
+from sklearn.metrics import (
+    accuracy_score, confusion_matrix, classification_report, roc_auc_score, roc_curve
+)
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+
 
 class SVMModel:
     def __init__(self, file_path):
@@ -48,14 +51,12 @@ class SVMModel:
         )
         grid_search.fit(self.X_train, self.y_train)
 
-        # Best parameters
-        print("\nBest Parameters Found:")
+        print("\n✅ Best Parameters Found:")
         print(grid_search.best_params_)
 
-        # Use the best estimator
         self.model = grid_search.best_estimator_
 
-        # Get feature importance if linear kernel
+        # Show feature importance only if linear kernel
         if grid_search.best_params_['kernel'] == 'linear':
             self.feature_importance()
 
@@ -63,14 +64,17 @@ class SVMModel:
         # Coefficients represent importance for linear kernel
         coef = self.model.coef_.flatten()
         importance = pd.Series(coef, index=self.X.columns)
-        importance = importance.sort_values(ascending=False)
+        importance = importance.sort_values(key=lambda x: abs(x), ascending=False)
 
-        print("\n--- Feature Importance (Linear Kernel) ---")
+        print("\n📊 Feature Importance (Linear Kernel):")
         print(importance)
 
         plt.figure(figsize=(8, 6))
         sns.barplot(x=importance.values, y=importance.index, palette='viridis')
         plt.title("Feature Importance (Linear Kernel)")
+        plt.xlabel("Coefficient Value")
+        plt.ylabel("Features")
+        plt.tight_layout()
         plt.show()
 
     def evaluate_model(self):
@@ -82,47 +86,41 @@ class SVMModel:
         classification = classification_report(self.y_test, y_pred)
         roc_auc = roc_auc_score(self.y_test, y_proba)
 
-        print(f"\n--- Model Evaluation Metrics ---")
+        print(f"\n🔍 Model Evaluation:")
         print(f"Accuracy: {accuracy:.4f}")
         print("\nConfusion Matrix:\n", confusion)
         print("\nClassification Report:\n", classification)
         print(f"\nROC AUC Score: {roc_auc:.4f}")
 
-        self.visualize_results(y_proba, confusion)
+        self.visualize_results(y_pred, y_proba)
 
-    def visualize_results(self, y_proba, confusion):
-        print("\n--- Visualization of Results ---")
-
-        # ✅ Confusion Matrix Fix
+    def visualize_results(self, y_pred, y_proba):
+        # Confusion Matrix
         plt.figure(figsize=(6, 4))
-        sns.heatmap(confusion, annot=True, fmt='d', cmap='Blues', cbar=False)
+        sns.heatmap(confusion_matrix(self.y_test, y_pred), annot=True, fmt="d", cmap="Blues")
         plt.title("Confusion Matrix")
-        plt.xlabel("Predicted Label")
-        plt.ylabel("True Label")
+        plt.xlabel("Predicted")
+        plt.ylabel("Actual")
+        plt.tight_layout()
         plt.show()
 
-        # Histogram of Predicted Probabilities
+        # ROC Curve
+        fpr, tpr, _ = roc_curve(self.y_test, y_proba)
         plt.figure(figsize=(6, 4))
-        sns.histplot(y_proba, bins=10, kde=True, color='skyblue')
-        plt.title("Histogram of Predicted Probabilities")
-        plt.xlabel("Predicted Probability")
-        plt.ylabel("Frequency")
-        plt.show()
-
-        # Boxplot of Predicted Probabilities by True Class
-        plt.figure(figsize=(6, 4))
-        sns.boxplot(x=self.y_test, y=y_proba)
-        plt.title("Boxplot of Predicted Probabilities by True Class")
-        plt.xlabel("True Class")
-        plt.ylabel("Predicted Probability")
+        plt.plot(fpr, tpr, label="ROC Curve", color="darkorange")
+        plt.plot([0, 1], [0, 1], linestyle='--', color='gray')
+        plt.xlabel("False Positive Rate")
+        plt.ylabel("True Positive Rate")
+        plt.title("ROC Curve")
+        plt.legend()
+        plt.tight_layout()
         plt.show()
 
 
 if __name__ == "__main__":
-    model = SVMModel('/Users/janhvidoijad/Desktop/Nefrikinoso/nefrikinoso/ckd_prediction_dataset.csv')
+    model = SVMModel('ckd_prediction_dataset.csv')
     model.preprocess_data()
-
-    print("Training SVM Model...")
+    print("\n🔧 Training SVM Model...")
     model.train_test_split()
     model.train_svm()
     model.evaluate_model()
