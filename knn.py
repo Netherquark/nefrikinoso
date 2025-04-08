@@ -1,121 +1,78 @@
 import pandas as pd
-import numpy as np
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report, roc_auc_score
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.model_selection import KFold, GridSearchCV
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.metrics import confusion_matrix, classification_report, roc_curve, accuracy_score
-from sklearn.preprocessing import StandardScaler
 
-class CKD_KNN_CrossValidator:
-    def __init__(self, file_path, target_column="class", n_splits=5):
+class KNNModel:
+    def __init__(self, file_path):
         self.file_path = file_path
-        self.dataset = None
-        self.target_column = target_column
-        self.n_splits = n_splits
-        self.best_k = None
-        self.statistics = []
-        self.best_fold_data = {}  # Store data for best fold (for plotting)
-        self.load_and_preprocess_data()
+        self.df = pd.read_csv(file_path)
+        self.model = None
 
-    def load_and_preprocess_data(self):
-        self.dataset = pd.read_csv(self.file_path)
-        self.dataset.drop(columns=["affected", "grf"], inplace=True)
-        self.dataset[self.target_column] = self.dataset[self.target_column].map({'ckd': 1, 'notckd': 0})
-        self.dataset = self.dataset.apply(pd.to_numeric, errors='coerce')
-        self.dataset.fillna(self.dataset.median(), inplace=True)
+    def preprocess_data(self):
+        columns_to_drop = [col for col in ['affected', 'age_avg'] if col in self.df.columns]
+        self.df.drop(columns=columns_to_drop, axis=1, inplace=True)
+
+        le = LabelEncoder()
+        if self.df['class'].dtype == 'object':
+            self.df['class'] = le.fit_transform(self.df['class'])
+        if self.df['grf'].dtype == 'object':
+            self.df['grf'] = le.fit_transform(self.df['grf'])
+
+        self.X = self.df.drop('class', axis=1)
+        self.y = self.df['class']
+
+    def train_test_split(self, test_size=0.2, random_state=42):
         scaler = StandardScaler()
-        features = self.dataset.drop(columns=[self.target_column])
-        self.dataset[features.columns] = scaler.fit_transform(features)
+        self.X_scaled = scaler.fit_transform(self.X)
+        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
+            self.X_scaled, self.y, test_size=test_size, random_state=random_state
+        )
 
-    def tune_hyperparameters(self):
-        X = self.dataset.drop(columns=[self.target_column])
-        y = self.dataset[self.target_column]
-        param_grid = {'n_neighbors': range(1, 20, 2)}
-        grid_search = GridSearchCV(KNeighborsClassifier(), param_grid, cv=5, scoring='accuracy')
-        grid_search.fit(X, y)
-        self.best_k = grid_search.best_params_['n_neighbors']
-        print(f"[INFO] Best k: {self.best_k}")
+    def train_model(self):
+        param_grid = {
+            'n_neighbors': [3, 5, 7, 9],
+            'weights': ['uniform', 'distance'],
+            'metric': ['euclidean', 'manhattan']
+        }
 
-    def evaluate_model(self):
-        if self.best_k is None:
-            self.tune_hyperparameters()
-        
-        X = self.dataset.drop(columns=[self.target_column])
-        y = self.dataset[self.target_column]
-        kf = KFold(n_splits=self.n_splits, shuffle=True, random_state=42)
+        knn = KNeighborsClassifier()
+        grid_search = GridSearchCV(knn, param_grid, cv=5, scoring='roc_auc', n_jobs=-1)
+        grid_search.fit(self.X_train, self.y_train)
+        self.model = grid_search.best_estimator_
 
-        best_acc = 0
-        for i, (train_idx, test_idx) in enumerate(kf.split(X)):
-            X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
-            y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
+        print("\n Best Parameters Found for K-Nearest Neighbors:")
+        print(grid_search.best_params_)
 
-            model = KNeighborsClassifier(n_neighbors=self.best_k)
-            model.fit(X_train, y_train)
+    def evaluate_model(self, return_scores=False):
+        y_pred = self.model.predict(self.X_test)
+        y_proba = self.model.predict_proba(self.X_test)[:, 1]
 
-            y_pred = model.predict(X_test)
-            y_proba = model.predict_proba(X_test)[:, 1]
+        accuracy = accuracy_score(self.y_test, y_pred)
+        roc_auc = roc_auc_score(self.y_test, y_proba)
 
-            cm = confusion_matrix(y_test, y_pred)
-            accuracy = np.trace(cm) / np.sum(cm)
-            sensitivity = cm[1, 1] / (cm[1, 1] + cm[1, 0]) if (cm[1, 1] + cm[1, 0]) != 0 else 0
-            specificity = cm[0, 0] / (cm[0, 0] + cm[0, 1]) if (cm[0, 0] + cm[0, 1]) != 0 else 0
-            self.statistics.append([accuracy, sensitivity, specificity])
+        if return_scores:
+            return {
+                "Accuracy": accuracy,
+                "ROC_AUC": roc_auc
+            }
 
-            # Save best fold data
-            if accuracy > best_acc:
-                best_acc = accuracy
-                self.best_fold_data = {
-                    'y_test': y_test,
-                    'y_pred': y_pred,
-                    'y_proba': y_proba,
-                    'model': model,
-                    'X_test': X_test
-                }
+        print(f"\n Model Evaluation for K-Nearest Neighbors:")
+        print(f"Accuracy: {accuracy:.4f}")
+        print("Confusion Matrix:\n", confusion_matrix(self.y_test, y_pred))
+        print("Classification Report:\n", classification_report(self.y_test, y_pred))
+        print(f"ROC AUC Score: {roc_auc:.4f}")
 
-    def get_results(self):
-        stats_df = pd.DataFrame(self.statistics, columns=["Accuracy", "Sensitivity", "Specificity"])
-        mean_accuracy = stats_df["Accuracy"].mean()
-        mean_sensitivity = stats_df["Sensitivity"].mean()
-        mean_specificity = stats_df["Specificity"].mean()
-        print(f"[K-NN Results] Accuracy: {mean_accuracy:.4f}, Sensitivity: {mean_sensitivity:.4f}, Specificity: {mean_specificity:.4f}")
-        return mean_accuracy, mean_sensitivity, mean_specificity
+        self.visualize_results(y_pred)
 
-    def plot_results(self):
-        if not self.best_fold_data:
-            print("No evaluation data found. Run evaluate_model() first.")
-            return
-
-        y_test = self.best_fold_data['y_test']
-        y_pred = self.best_fold_data['y_pred']
-        y_proba = self.best_fold_data['y_proba']
-
-        print("\n[Classification Report]\n", classification_report(y_test, y_pred))
-        print("[Accuracy]:", accuracy_score(y_test, y_pred))
-
-        # Confusion Matrix
-        cm = confusion_matrix(y_test, y_pred)
-        sns.heatmap(cm, annot=True, fmt="d", cmap="Blues")
-        plt.title("Confusion Matrix")
+    def visualize_results(self, y_pred):
+        plt.figure(figsize=(6, 4))
+        sns.heatmap(confusion_matrix(self.y_test, y_pred), annot=True, fmt='d', cmap='Oranges')
+        plt.title("Confusion Matrix - KNN")
         plt.xlabel("Predicted")
         plt.ylabel("Actual")
+        plt.tight_layout()
         plt.show()
-
-        # ROC Curve
-        fpr, tpr, _ = roc_curve(y_test, y_proba)
-        plt.plot(fpr, tpr, label="ROC Curve", color="darkorange")
-        plt.plot([0, 1], [0, 1], linestyle='--', color='gray')
-        plt.xlabel("False Positive Rate")
-        plt.ylabel("True Positive Rate")
-        plt.title("ROC Curve")
-        plt.legend()
-        plt.show()
-
-        print("\nNote: Feature importance is not available for K-NN.")
-
-# === USAGE ===
-file_path = "/home/r1ddh1/2nd_year/pbl_sem4/processed_data.csv"
-ckd_knn_validator = CKD_KNN_CrossValidator(file_path)
-ckd_knn_validator.evaluate_model()
-ckd_knn_validator.get_results()
-ckd_knn_validator.plot_results()
