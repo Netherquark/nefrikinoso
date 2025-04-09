@@ -13,6 +13,7 @@ from randomForest_classifier import RandomForestModel
 from gradient_boost import GradientBoostModel
 from catboost_ckd import CatBoostCKDModel
 from stacked_ensemble import StackedEnsembleModel
+from voting_ensemble import CKDEnsembleModel
 
 from sklearn.metrics import classification_report, confusion_matrix
 
@@ -155,7 +156,8 @@ def main():
         (RandomForestModel, "Random Forest"),
         (GradientBoostModel, "Gradient Boosting"),
         (CatBoostCKDModel, "CatBoost"),
-        (StackedEnsembleModel, "Stacked Ensemble Learning")
+        (StackedEnsembleModel, "Stacked Ensemble Learning"),
+        (CKDEnsembleModel, "Voting")
     ]
 
     for model_class, model_name in models_to_run:
