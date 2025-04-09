@@ -11,9 +11,8 @@ from knn import KNNModel
 from NaiveBayes import NaiveBayesModel
 from randomForest_classifier import RandomForestModel
 from gradient_boost import GradientBoostModel
-from ensemble_learning import EnsembleLearningModel
 from catboost_ckd import CatBoostCKDModel
-from metalearning import MetaLearningModel
+from stacked_ensemble import StackedEnsembleModel
 
 from sklearn.metrics import classification_report, confusion_matrix
 
@@ -155,9 +154,8 @@ def main():
         (NaiveBayesModel, "Naive Bayes"),
         (RandomForestModel, "Random Forest"),
         (GradientBoostModel, "Gradient Boosting"),
-        (EnsembleLearningModel, "Ensemble Learning"),
         (CatBoostCKDModel, "CatBoost"),
-        (MetaLearningModel, "Meta-Learning")
+        (StackedEnsembleModel, "Stacked Ensemble Learning")
     ]
 
     for model_class, model_name in models_to_run:
