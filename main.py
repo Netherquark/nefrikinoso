@@ -3,6 +3,7 @@ import seaborn as sns
 import pandas as pd
 import time
 
+from predict_ckd import CKDPredictor
 from XGBoost import XGBoostModel
 from SVM import SVMModel
 from Decision_tree import DecisionTreeModel
@@ -145,6 +146,7 @@ def plot_all_top_features(reports, top_n=5):
 def main():
     results = []
     detailed_reports = []
+    model_objects = {}
 
     models_to_run = [
         (XGBoostModel, "XGBoost"),
@@ -163,15 +165,39 @@ def main():
     for model_class, model_name in models_to_run:
         print(f"\n Running {model_name}...")
         try:
-            score_dict = run_and_collect(model_class, model_name)
-            if score_dict:
-                detailed_reports.append(score_dict)
-                results.append({
-                    "Model": model_name,
-                    "Accuracy": score_dict["Accuracy"],
-                    "ROC_AUC": score_dict["ROC_AUC"],
-                    "Training_Time": score_dict["Training_Time"]
-                })
+            model = model_class(DATASET_PATH)
+            model.preprocess_data()
+            model.train_test_split()
+            start_time = time.time()
+            model.train_model()
+            end_time = time.time()
+
+            training_time = end_time - start_time
+            scores = model.evaluate_model(return_scores=True)
+            scores['Model'] = model_name
+            scores['Training_Time'] = training_time
+
+            y_true, y_pred = model.y_test, model.model.predict(model.X_test)
+            scores['y_true'] = y_true
+            scores['y_pred'] = y_pred
+
+            # Store model for later use
+            model_objects[model_name] = model.model
+
+            if hasattr(model.model, 'feature_importances_'):
+                importances = model.model.feature_importances_
+                scores['Feature_Importances'] = pd.Series(importances, index=model.X.columns).sort_values(ascending=False)
+            elif hasattr(model.model, 'coef_'):
+                importances = abs(model.model.coef_[0])
+                scores['Feature_Importances'] = pd.Series(importances, index=model.X.columns).sort_values(ascending=False)
+
+            detailed_reports.append(scores)
+            results.append({
+                "Model": model_name,
+                "Accuracy": scores["Accuracy"],
+                "ROC_AUC": scores["ROC_AUC"],
+                "Training_Time": training_time
+            })
         except Exception as e:
             print(f" Error in {model_name}: {e}")
 
@@ -180,20 +206,29 @@ def main():
     print("\n Final Comparison Table:")
     print(results_df.sort_values(by="Accuracy", ascending=False))
 
-    # Metric Bar Charts
+    # Metric Charts
     plot_metric_bar(results_df, "Accuracy", "crest")
     plot_metric_bar(results_df, "ROC_AUC", "viridis")
     plot_metric_bar(results_df, "Training_Time", "magma")
-
-    # Classification Reports
     plot_classification_report_dashboard(detailed_reports)
-
-
-    # Confusion Matrices
     plot_confusion_matrices(detailed_reports)
-
-    # Combined Top Feature Importance
     plot_all_top_features(detailed_reports, top_n=5)
+
+    # Get the best model (by accuracy)
+    best_model_row = results_df.sort_values(by="Accuracy", ascending=False).iloc[0]
+    best_model_name = best_model_row["Model"]
+    best_model = model_objects[best_model_name]
+
+    print(f"\nUsing best model '{best_model_name}' for CKD prediction from user input...")
+
+    # User input and CKD prediction
+    feature_order = list(model.X.columns)
+    predictor = CKDPredictor(best_model, feature_order)
+
+    user_data = predictor.get_user_input()
+    prediction = predictor.predict(user_data)
+
+    print(f"\n🩺 Prediction Result: The patient is predicted to have **{prediction}**.")
 
 if __name__ == "__main__":
     main()
