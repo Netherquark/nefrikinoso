@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>CKD Prediction</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1 class="mt-4 mb-4">CKD Prediction Form</h1>
+        <form method="POST" action="/">
+            {% for feature in feature_order %}
+            <div class="form-group">
+                <label for="{{ feature }}">{{ feature|capitalize }}</label>
+                <input type="text" class="form-control" id="{{ feature }}" name="{{ feature }}" required>
+            </div>
+            {% endfor %}
+            <button type="submit" class="btn btn-primary">Get Predictions</button>
+        </form>
+
+        <div id="result" class="mt-4">
+            {% if predictions %}
+                <h2>Prediction Results:</h2>
+                {% if "Error" in predictions %}
+                    <div class="alert alert-danger" role="alert">
+                        {{ predictions["Error"] }}
+                    </div>
+                {% else %}
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Model</th>
+                                <th>Prediction</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for model, prediction in predictions.items() %}
+                                <tr>
+                                    <td>{{ model }}</td>
+                                    <td>{{ prediction }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>
