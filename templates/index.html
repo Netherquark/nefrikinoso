@@ -11,10 +11,12 @@
         <h1 class="mt-4 mb-4">CKD Prediction Form</h1>
         <form method="POST" action="/">
             {% for feature in feature_order %}
-            <div class="form-group">
-                <label for="{{ feature }}">{{ feature|capitalize }}</label>
-                <input type="text" class="form-control" id="{{ feature }}" name="{{ feature }}" required>
-            </div>
+                {% if feature != 'stage' %}
+                <div class="form-group">
+                    <label for="{{ feature }}">{{ feature|capitalize }}</label>
+                    <input type="text" class="form-control" id="{{ feature }}" name="{{ feature }}" required>
+                </div>
+                {% endif %}
             {% endfor %}
             <button type="submit" class="btn btn-primary">Get Predictions</button>
         </form>

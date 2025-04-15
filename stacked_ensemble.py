@@ -32,7 +32,7 @@ class StackedEnsembleModel:
 
     def preprocess_data(self):
         df = self.df.copy()
-        df.drop(columns=['affected', 'age_avg'], inplace=True, errors='ignore')
+        df.drop(columns=['affected', 'age_avg', 'stage'], inplace=True, errors='ignore')
 
         le = LabelEncoder()
         if df['class'].dtype == 'object':

@@ -16,10 +16,10 @@ app = Flask(__name__)
 
 # Load full dataset to fit encoders and scaler
 _df = pd.read_csv(dataset_path)
-_df.drop(columns=[col for col in ['affected', 'age_avg'] if col in _df.columns], inplace=True, errors='ignore')
+_df.drop(columns=[col for col in ['affected', 'age_avg', 'stage'] if col in _df.columns], inplace=True, errors='ignore')
 
 # Identify features
-all_features = [c for c in _df.columns if c != 'class']
+all_features = [c for c in _df.columns if c != 'class' and c!= 'stage']
 cat_cols = ['rbc', 'pc', 'pcc', 'ba', 'htn', 'dm', 'cad', 'appet', 'pe', 'ane', 'grf', 'sex', 'hypertension']
 cat_cols = [c for c in cat_cols if c in all_features]
 num_cols = [c for c in all_features if c not in cat_cols]

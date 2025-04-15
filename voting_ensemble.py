@@ -27,7 +27,7 @@ class CKDEnsembleModel:
 
     def preprocess_data(self):
         df = pd.read_csv(self.file_path)
-        df = df.drop(['affected', 'age_avg'], axis=1, errors='ignore')
+        df = df.drop(['affected', 'age_avg', 'stage'], axis=1, errors='ignore')
 
         # Encode categorical columns
         le = LabelEncoder()

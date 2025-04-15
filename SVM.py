@@ -13,7 +13,7 @@ class SVMModel:
         self.model = None
 
     def preprocess_data(self):
-        columns_to_drop = [col for col in ['affected', 'age_avg'] if col in self.df.columns]
+        columns_to_drop = [col for col in ['affected', 'age_avg', 'stage'] if col in self.df.columns]
         self.df = self.df.drop(columns=columns_to_drop, axis=1)
 
         le = LabelEncoder()
