@@ -20,8 +20,8 @@ app = Flask(__name__)
 # Note: The keys below exactly match the internal column names so that
 # the UI uses the improved display names without affecting internal logic.
 display_names = {
-    "bp (Diastolic)": "Blood Pressure (Diastolic)",
-    "bp limit": "Blood Pressure Limit",
+    "bp (Diastolic)": "Blood Pressure (Diastolic)\n\n",
+    "bp limit": "Blood Pressure Limit\n\n",
     "sg": "Specific Gravity\n[1.005–1.030]",
     "al": "Albumin Level\n[0–5 scale]",
     "rbc": "Red Blood Cells in Urine\n[0: normal, 1: abnormal]",
