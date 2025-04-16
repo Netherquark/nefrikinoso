@@ -1,97 +1,64 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CKD Prediction</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>CKD Prediction</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
-  <nav class="navbar navbar-expand-lg navbar-light bg-light mb-4">
     <div class="container">
-      <a class="navbar-brand" href="#">CKD Predictor</a>
-    </div>
-  </nav>
-
-  <div class="container">
-    <!-- Input Form Card -->
-    <div class="card mb-4">
-      <div class="card-header">
-        Enter Patient Data
-      </div>
-      <div class="card-body">
-        <form method="post">
-          <div class="row">
-            {% for feat in feature_order %}
-              <div class="col-md-4 mb-3">
-                <label for="{{ feat }}" class="form-label text-capitalize">{{ feat.replace('_',' ') }}</label>
-                <input type="text" class="form-control" id="{{ feat }}" name="{{ feat }}" required>
-              </div>
+        <h1 class="mt-4 mb-4">CKD Prediction Form</h1>
+        <form method="POST" action="/">
+            {% for feature in feature_order %}
+                {% if feature != 'stage' %}
+                <div class="form-group">
+                    <label for="{{ feature }}">{{ feature|capitalize }}</label>
+                    <input type="text" class="form-control" id="{{ feature }}" name="{{ feature }}" required>
+                </div>
+                {% endif %}
             {% endfor %}
-          </div>
-          <button type="submit" class="btn btn-primary">Predict</button>
+            <button type="submit" class="btn btn-primary">Get Predictions</button>
         </form>
-      </div>
-    </div>
 
-    <!-- Results Table Card -->
-    {% if model_names %}
-    <div class="card mb-3">
-      <div class="card-header">
-        Model Predictions &amp; Recall
-      </div>
-      <div class="card-body p-0">
-        <div class="table-responsive">
-          <table class="table table-striped mb-0">
-            <thead class="table-light">
-              <tr>
-                <th>Model</th>
-                <th>Prediction</th>
-                <th>Recall</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for name in model_names %}
-              <tr>
-                <td>{{ name }}</td>
-                <td>
-                  {% if predictions %}
-                    {{ predictions[name] }}
-                  {% else %}
-                    &mdash;
-                  {% endif %}
-                </td>
-                <td>
-                  {% if recalls[name] is not none %}
-                    {{ (recalls[name]*100)|round(2) }}%
-                  {% else %}
-                    N/A
-                  {% endif %}
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+        <div id="result" class="mt-4">
+            {% if predictions %}
+                <h2>Prediction Results:</h2>
+                {% if "Error" in predictions %}
+                    <div class="alert alert-danger" role="alert">
+                        {{ predictions["Error"] }}
+                    </div>
+                {% else %}
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Model</th>
+                                <th>Prediction</th>
+                                <th>Average Recall</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for model, prediction in predictions.items() %}
+                                <tr>
+                                    <td>{{ model }}</td>
+                                    <td>{{ prediction }}</td>
+                                    <td>
+                                        {% if recall_data and model in recall_data and '0' in recall_data[model] and '1' in recall_data[model] %}
+                                            {{ ((recall_data[model]['0'] + recall_data[model]['1']) / 2)|round(4) }}
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% endif %}
+            {% endif %}
         </div>
-      </div>
     </div>
-
-    <!-- Final Conclusion -->
-    {% if final_conclusion %}
-    <div class="alert alert-info">
-      <h5 class="mb-0">
-        Final Conclusion:&nbsp;
-        {% if final_conclusion == 'CKD' %}
-          <span class="badge bg-danger">{{ final_conclusion }}</span>
-        {% else %}
-          <span class="badge bg-success">{{ final_conclusion }}</span>
-        {% endif %}
-      </h5>
-    </div>
-    {% endif %}
-    {% endif %}
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
 </html>
