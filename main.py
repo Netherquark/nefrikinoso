@@ -15,7 +15,7 @@ from randomForest_classifier import RandomForestModel
 from gradient_boost import GradientBoostModel
 from catboost_ckd import CatBoostCKDModel
 from stacked_ensemble import StackedEnsembleModel
-from voting_ensemble import CKDEnsembleModel
+from voting_ensemble import VotingEnsembleModel
 
 from sklearn.metrics import classification_report, confusion_matrix
 
@@ -164,7 +164,7 @@ def main():
         (GradientBoostModel, "Gradient Boosting"),
         (CatBoostCKDModel, "CatBoost"),
         (StackedEnsembleModel, "Stacked Ensemble Learning"),
-        (CKDEnsembleModel, "Voting")
+        (VotingEnsembleModel, "Voting")
     ]
 
     for model_class, model_name in models_to_run:
@@ -243,7 +243,7 @@ def main():
     user_data = predictor.get_user_input()
     prediction = predictor.predict(user_data)
 
-    print(f"\n🩺 Prediction Result: The patient is predicted to have **{prediction}**.")
+    print(f"\n Prediction Result: The patient is predicted to have **{prediction}**.")
 
 if __name__ == "__main__":
     main()
