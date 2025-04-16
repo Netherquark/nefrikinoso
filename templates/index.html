@@ -1,89 +1,102 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>CKD Prediction</title>
-    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>CKD Prediction</title>
+  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <h1 class="mt-4 mb-4">CKD Prediction Form</h1>
-        <form method="POST" action="/">
-            {% for feature in feature_order %}
-                {% if feature != 'stage' %}
-                <div class="form-group">
-                    <label for="{{ feature }}">{{ feature|capitalize }}</label>
-                    <input type="text" class="form-control" id="{{ feature }}" name="{{ feature }}" required>
-                </div>
-                {% endif %}
+  <div class="container">
+    <h1 class="mt-4 mb-4">CKD Prediction Form</h1>
+    <form method="POST" action="/">
+      {% for feature in feature_order %}
+        {% if feature != 'stage' %}
+          <div class="form-group">
+            <label for="{{ feature }}">{{ feature|capitalize }}</label>
+            <input type="text" class="form-control" id="{{ feature }}" name="{{ feature }}" required>
+          </div>
+        {% endif %}
+      {% endfor %}
+      <button type="submit" class="btn btn-primary">Get Predictions</button>
+    </form>
+
+    <div id="result" class="mt-4">
+      {% if predictions %}
+        <h2>Prediction Results:</h2>
+        <table class="table table-bordered">
+          <thead>
+            <tr>
+              <th>Model</th>
+              <th>Prediction</th>
+              <th>ROC AUC</th>
+              <th>Avg. Recall</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for model, prediction in predictions.items() %}
+              <tr>
+                <td>{{ model }}</td>
+                <td>{{ prediction }}</td>
+                <td>
+                  {% if roc_auc_data and model in roc_auc_data %}
+                    {{ roc_auc_data[model]|round(4) }}
+                  {% else %}
+                    N/A
+                  {% endif %}
+                </td>
+                <td>
+                  {% if recall_data and model in recall_data %}
+                    {% if recall_data[model] is mapping %}
+                      {{ (recall_data[model]|dictsort(true)|map(attribute=1)|sum / recall_data[model]|length)|round(4) }}
+                    {% else %}
+                      {{ recall_data[model]|round(4) }}
+                    {% endif %}
+                  {% else %}
+                    N/A
+                  {% endif %}
+                </td>
+              </tr>
             {% endfor %}
-            <button type="submit" class="btn btn-primary">Get Predictions</button>
-        </form>
+          </tbody>
+        </table>
+      {% endif %}
 
-        <div id="result" class="mt-4">
-            {% if predictions %}
-                <h2>Prediction Results:</h2>
-                {% if "Error" in predictions %}
-                    <div class="alert alert-danger" role="alert">
-                        {{ predictions["Error"] }}
-                    </div>
-                {% else %}
-                    <table class="table table-bordered">
-                        <thead>
-                            <tr>
-                                <th>Model</th>
-                                <th>Prediction</th>
-                                <th>Average Recall</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for model, prediction in predictions.items() %}
-                                <tr>
-                                    <td>{{ model }}</td>
-                                    <td>{{ prediction }}</td>
-                                    <td>
-                                        {% if recall_data and model in recall_data and '0' in recall_data[model] and '1' in recall_data[model] %}
-                                            {{ ((recall_data[model]['0'] + recall_data[model]['1']) / 2)|round(4) }}
-                                        {% else %}
-                                            N/A
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                {% endif %}
+      {% if final_conclusion %}
+        <div class="alert alert-info">
+          <h5 class="mb-0">
+            Final Conclusion:&nbsp;
+            {% if final_conclusion == 'CKD' %}
+              <span class="badge badge-danger">{{ final_conclusion }}</span>
+            {% else %}
+              <span class="badge badge-success">{{ final_conclusion }}</span>
             {% endif %}
-
-            {% if final_conclusion %}
-                <div class="alert alert-info">
-                    <h5 class="mb-0">
-                        Final Conclusion:&nbsp;
-                        {% if final_conclusion == 'CKD' %}
-                            <span class="badge bg-danger">{{ final_conclusion }}</span>
-                        {% else %}
-                            <span class="badge bg-success">{{ final_conclusion }}</span>
-                        {% endif %}
-                    </h5>
-                </div>
-                {% if conclusion_model_name %}
-                    <p class="mt-2">
-                        The final conclusion was derived using the <b>{{ conclusion_model_name }}</b> algorithm, which has an average recall score of
-                        <b>
-                            {% if conclusion_recall %}
-                                {{ conclusion_recall }}
-                            {% else %}
-                                N/A
-                            {% endif %}
-                        </b>.
-                    </p>
-                {% endif %}
-            {% endif %}
+          </h5>
         </div>
+        {% if conclusion_model_name %}
+          <p class="mt-2">
+            The final prediction was derived using the <b>{{ conclusion_model_name }}</b> algorithm, which has an ROC AUC score of
+            <b>
+              {% if conclusion_roc_auc %}
+                {{ conclusion_roc_auc }}
+              {% else %}
+                N/A
+              {% endif %}
+            </b> and an average recall of
+            <b>
+              {% if conclusion_recall %}
+                {{ conclusion_recall }}
+              {% else %}
+                N/A
+              {% endif %}
+            </b>.
+          </p>
+        {% endif %}
+      {% endif %}
     </div>
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  </div>
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
 </html>

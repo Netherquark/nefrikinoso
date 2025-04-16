@@ -1,14 +1,15 @@
 import os
-from flask import Flask, render_template, request, jsonify
-import pandas as pd
+import json
 import joblib
+import pandas as pd
+from flask import Flask, render_template, request, jsonify
 from sklearn.preprocessing import LabelEncoder, StandardScaler
-import json  # Import the json module
 
 # Constants
 dataset_path = "ckd_prediction_dataset.csv"
 model_dir = "models"
-recall_file_path = "recall_values.json"  # Path to the recall values JSON
+roc_auc_file_path = "roc_auc_values.json"    # File with ROC AUC values
+recall_file_path = "recall_values.json"        # File with recall values
 
 # Ensure model directory exists
 os.makedirs(model_dir, exist_ok=True)
@@ -20,17 +21,16 @@ app = Flask(__name__)
 _df = pd.read_csv(dataset_path)
 _df.drop(columns=[col for col in ['affected', 'age_avg', 'stage'] if col in _df.columns], inplace=True, errors='ignore')
 
-# Identify features
-all_features = [c for c in _df.columns if c != 'class' and c!= 'stage']
+# Identify features: exclude the class and any stage column
+all_features = [c for c in _df.columns if c != 'class' and c != 'stage']
 cat_cols = ['rbc', 'pc', 'pcc', 'ba', 'htn', 'dm', 'cad', 'appet', 'pe', 'ane', 'grf', 'sex', 'hypertension']
 cat_cols = [c for c in cat_cols if c in all_features]
 num_cols = [c for c in all_features if c not in cat_cols]
 
-# Fit label encoders on categorical columns and record default values
+# Fit label encoders on categorical columns and record default labels
 default_labels = {}
 encoders = {}
 for col in cat_cols:
-    # clean and lowercase
     _df[col] = _df[col].astype(str).str.strip().str.lower()
     default = _df[col].mode()[0]
     default_labels[col] = default
@@ -38,7 +38,7 @@ for col in cat_cols:
     le.fit(_df[col])
     encoders[col] = le
 
-# Fit scaler on numeric + encoded categorical
+# Fit scaler on numeric+encoded categorical data
 _df_enc = _df.copy()
 for col, le in encoders.items():
     _df_enc[col] = le.transform(_df_enc[col].str.strip().str.lower())
@@ -68,8 +68,8 @@ model_classes = {
     "Random Forest": RandomForestModel,
     "Gradient Boosting": GradientBoostModel,
     "CatBoost": CatBoostCKDModel,
-    "Stacked Ensemble Learning": StackedEnsembleModel,  # Updated name
-    "Voting": CKDEnsembleModel                      # Updated name
+    "Stacked Ensemble Learning": StackedEnsembleModel,
+    "Voting": CKDEnsembleModel
 }
 
 models = {}
@@ -78,7 +78,6 @@ for name, cls in model_classes.items():
     if os.path.exists(path):
         models[name] = joblib.load(path)
     else:
-        # Train and persist
         m = cls(dataset_path)
         m.preprocess_data()
         m.train_test_split()
@@ -89,40 +88,49 @@ for name, cls in model_classes.items():
 @app.route('/', methods=['GET', 'POST'])
 def index():
     predictions = {}
-    recall_data = {}  # Initialize an empty dictionary for recall data
+    roc_auc_data = {}   # Holds ROC AUC values loaded from JSON
+    recall_data = {}    # Holds recall values loaded from JSON
     final_conclusion = None
     conclusion_model_name = None
+    conclusion_roc_auc = None
     conclusion_recall = None
 
     if request.method == 'POST':
-        # Collect user input
+        # Collect user input from form fields
         user_data = {}
         for feat in all_features:
             user_data[feat] = request.form.get(feat, '').strip().lower()
 
-        # Build DataFrame
+        # Build DataFrame for input
         df_input = pd.DataFrame([user_data], columns=all_features)
-        # Encode categoricals with default fallback
+        # Encode categorical features and convert to numerical
         for col, le in encoders.items():
             vals = df_input[col].astype(str).str.strip().str.lower()
             df_input[col] = [v if v in le.classes_ else default_labels[col] for v in vals]
             df_input[col] = le.transform(df_input[col])
-        # Convert numericals
         for col in num_cols:
             try:
                 df_input[col] = df_input[col].astype(float)
             except ValueError:
                 df_input[col] = 0.0
-        # Scale
         X_input = scaler.transform(df_input[all_features])
 
-        # Predict
+        # Obtain predictions from each model
         for name, model in models.items():
             try:
                 pred = model.predict(X_input)[0]
                 predictions[name] = "CKD" if pred == 0 else "NOT_CKD"
             except Exception as e:
                 predictions[name] = f"Error: {e}"
+
+        # Load ROC AUC data from JSON
+        try:
+            with open(roc_auc_file_path, 'r') as f:
+                roc_auc_data = json.load(f)
+        except FileNotFoundError:
+            print(f"Warning: ROC AUC values file '{roc_auc_file_path}' not found.")
+        except json.JSONDecodeError:
+            print(f"Warning: Could not decode JSON from '{roc_auc_file_path}'.")
 
         # Load recall data from JSON
         try:
@@ -133,40 +141,55 @@ def index():
         except json.JSONDecodeError:
             print(f"Warning: Could not decode JSON from '{recall_file_path}'.")
 
-        best_recall = -1
-        best_recall_model = None
+        best_roc = -1
+        best_roc_model = None
 
-        # Determine the model with the highest average recall
-        for model_name, recalls in recall_data.items():
-            if '0' in recalls and '1' in recalls:
-                avg_recall = (recalls['0'] + recalls['1']) / 2
-                if avg_recall > best_recall and model_name in predictions:
-                    best_recall = avg_recall
-                    best_recall_model = model_name
+        # Select the model with the highest ROC AUC score
+        for model_name, roc_value in roc_auc_data.items():
+            if roc_value > best_roc and model_name in predictions:
+                best_roc = roc_value
+                best_roc_model = model_name
 
-        # Set the final conclusion based on the best recall model
-        if best_recall_model:
-            final_conclusion = predictions[best_recall_model]
-            conclusion_model_name = best_recall_model
-            conclusion_recall = round(best_recall, 4)
+        # Set final prediction based on best ROC AUC model
+        if best_roc_model:
+            final_conclusion = predictions[best_roc_model]
+            conclusion_model_name = best_roc_model
+            conclusion_roc_auc = round(best_roc, 4)
+            # Compute average recall if recall data for the best model is a dict
+            if best_roc_model in recall_data:
+                recall_val = recall_data[best_roc_model]
+                if isinstance(recall_val, dict):
+                    # Compute average over the dictionary values
+                    avg_recall = sum(recall_val.values()) / len(recall_val)
+                    conclusion_recall = round(avg_recall, 4)
+                else:
+                    conclusion_recall = round(recall_val, 4)
+            else:
+                conclusion_recall = "N/A"
         elif predictions:
-            # Fallback to the first model if no recall data is available for any predicted model
             first_model_name = list(predictions.keys())[0]
             final_conclusion = predictions[first_model_name]
             conclusion_model_name = first_model_name
-            if recall_data and conclusion_model_name in recall_data and '0' in recall_data[conclusion_model_name] and '1' in recall_data[conclusion_model_name]:
-                conclusion_recall = round(((recall_data[conclusion_model_name]['0'] + recall_data[conclusion_model_name]['1']) / 2), 4)
-            else:
-                conclusion_recall = "N/A"
+            conclusion_roc_auc = "N/A"
+            conclusion_recall = "N/A"
         else:
             final_conclusion = "N/A"
             conclusion_model_name = "N/A"
+            conclusion_roc_auc = "N/A"
             conclusion_recall = "N/A"
 
-        return render_template('index.html', predictions=predictions, feature_order=all_features, recall_data=recall_data, final_conclusion=final_conclusion, conclusion_model_name=conclusion_model_name, conclusion_recall=conclusion_recall)
+        return render_template('index.html', predictions=predictions, feature_order=all_features, 
+                               roc_auc_data=roc_auc_data, recall_data=recall_data, 
+                               final_conclusion=final_conclusion, 
+                               conclusion_model_name=conclusion_model_name, 
+                               conclusion_roc_auc=conclusion_roc_auc,
+                               conclusion_recall=conclusion_recall)
 
-    # GET request
-    return render_template('index.html', predictions=None, feature_order=all_features, recall_data={}, final_conclusion=None, conclusion_model_name=None, conclusion_recall=None)
+    # GET request: pass empty dictionaries for ROC AUC and recall
+    return render_template('index.html', predictions=None, feature_order=all_features, 
+                           roc_auc_data={}, recall_data={}, final_conclusion=None, 
+                           conclusion_model_name=None, conclusion_roc_auc=None,
+                           conclusion_recall=None)
 
 @app.route('/api/predict', methods=['POST'])
 def api_predict():

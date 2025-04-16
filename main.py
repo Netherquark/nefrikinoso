@@ -20,7 +20,8 @@ from voting_ensemble import CKDEnsembleModel
 from sklearn.metrics import classification_report, confusion_matrix
 
 DATASET_PATH = "ckd_prediction_dataset.csv"
-RECALL_OUTPUT_PATH = "recall_values.json"
+# Updated constant: saving ROC AUC values instead of recall values
+ROC_AUC_OUTPUT_PATH = "roc_auc_values.json"
 
 def run_and_collect(model_class, model_name):
     model = model_class(DATASET_PATH)
@@ -149,7 +150,8 @@ def main():
     results = []
     detailed_reports = []
     model_objects = {}
-    recall_values = {}
+    # Replace recall_values with roc_auc_values dictionary
+    roc_auc_values = {}
 
     models_to_run = [
         (XGBoostModel, "XGBoost"),
@@ -202,13 +204,8 @@ def main():
                 "Training_Time": training_time
             })
 
-            # Extract recall values
-            clf_report = classification_report(y_true, y_pred, output_dict=True)
-            model_recall = {}
-            for label, metrics in clf_report.items():
-                if label not in ['accuracy', 'macro avg', 'weighted avg']:
-                    model_recall[label] = metrics['recall']
-            recall_values[model_name] = model_recall
+            # Instead of extracting recall values, extract and store the ROC AUC score
+            roc_auc_values[model_name] = scores["ROC_AUC"]
 
         except Exception as e:
             print(f" Error in {model_name}: {e}")
@@ -218,11 +215,11 @@ def main():
     print("\n Final Comparison Table:")
     print(results_df.sort_values(by="Accuracy", ascending=False))
 
-    # Save recall values to JSON
-    with open(RECALL_OUTPUT_PATH, 'w') as f:
-        json.dump(recall_values, f, indent=4)
+    # Save ROC AUC values to JSON
+    with open(ROC_AUC_OUTPUT_PATH, 'w') as f:
+        json.dump(roc_auc_values, f, indent=4)
 
-    print(f"\nRecall values for each model saved to '{RECALL_OUTPUT_PATH}'")
+    print(f"\nROC AUC values for each model saved to '{ROC_AUC_OUTPUT_PATH}'")
 
     # Metric Charts
     plot_metric_bar(results_df, "Accuracy", "crest")
@@ -232,8 +229,8 @@ def main():
     plot_confusion_matrices(detailed_reports)
     plot_all_top_features(detailed_reports, top_n=5)
 
-    # Get the best model (by accuracy)
-    best_model_row = results_df.sort_values(by="Accuracy", ascending=False).iloc[0]
+    # Get the best model (by ROC_AUC)
+    best_model_row = results_df.sort_values(by="ROC_AUC", ascending=False).iloc[0]
     best_model_name = best_model_row["Model"]
     best_model = model_objects[best_model_name]
 
