@@ -1,84 +1,214 @@
 <!DOCTYPE html>
-<html lang="en">
+ <html lang="en">
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>nefrikinoso</title>
-    
-    <!-- Bootstrap -->
-    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+ <head>
+     <meta charset="UTF-8">
+     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+     <title>nefrikinoso</title>
 
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
-</head>
+     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
 
-<body>
-    <div class="container text-center mt-4">
-        <!-- Centered Large Logo -->
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" style="height: 120px;">
-        <h1 class="mt-3" style="font-size: 2rem;">nefrikinoso: early stage CKD prediction</h1>
-    </div>
+     <link rel="preconnect" href="https://fonts.googleapis.com">
+     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
 
-    <div class="container mt-4">
-        <!-- Input Form -->
-        <form method="POST" action="/">
-            <div class="row">
-                {% for feature in feature_order %}
-                    {% if feature != 'stage' %}
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label for="{{ feature }}">
-                                    {{ display_names.get(feature, feature.replace('_', ' ').capitalize()).replace('\n', '<br>') | safe }}
-                                </label>
-                                <input type="text" class="form-control" id="{{ feature }}" name="{{ feature }}" required>
-                            </div>
-                        </div>
-                    {% endif %}
-                {% endfor %}
-            </div>
-            <button type="submit" class="btn btn-primary">Get Prediction</button>
-        </form>
+     <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
 
-        <!-- Results Section -->
-        <div id="result" class="mt-4">
-            {% if predictions %}
-                <h2>Prediction Result:</h2>
-                <table class="table table-bordered">
-                    <thead>
-                        <tr>
-                            <th>Model</th>
-                            <th>Prediction</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Stacked Ensemble Learning</td>
-                            <td>{{ predictions['Stacked Ensemble Learning'] }}</td>
-                        </tr>
-                    </tbody>
-                </table>
-            {% endif %}
+     <style>
+         body {
+             font-family: 'Inter', sans-serif;
+             background-color: #f8f9fa; /* Light grey background */
+             color: #343a40; /* Dark grey text */
+             line-height: 1.6;
+         }
 
-            {% if final_conclusion %}
-                <div class="alert alert-info">
-                    <h5 class="mb-0">
-                        Final Conclusion:&nbsp;
-                        {% if final_conclusion == 'CKD' %}
-                            <span class="badge badge-danger">{{ final_conclusion }}</span>
-                        {% else %}
-                            <span class="badge badge-success">{{ final_conclusion }}</span>
-                        {% endif %}
-                    </h5>
-                </div>
-            {% endif %}
-        </div>
-    </div>
+         /* Typography Hierarchy */
+         h1, h2, h3, h4, h5, h6 {
+             font-weight: 700; /* Bold for headings */
+             color: #212529; /* Darker grey for headings */
+             margin-bottom: 0.75rem;
+         }
 
-    <!-- Scripts -->
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-</body>
+         h1 {
+             font-size: 2.5rem;
+         }
 
-</html>
+         h2 {
+             font-size: 2rem;
+         }
+
+         label {
+             font-weight: 500; /* Medium weight for labels */
+             color: #495057;
+             margin-bottom: 0.3rem;
+             display: block; /* Ensure labels are above inputs */
+         }
+
+         .form-control {
+             font-size: 1rem;
+             padding: 0.75rem 1rem;
+             border-radius: 0.25rem;
+             border: 1px solid #ced4da;
+         }
+
+         .btn-primary {
+             background-color: #007bff;
+             border-color: #007bff;
+             font-weight: 600;
+             padding: 0.8rem 1.5rem;
+             border-radius: 0.25rem;
+             transition: background-color 0.3s ease;
+         }
+
+         .btn-primary:hover {
+             background-color: #0056b3;
+             border-color: #0056b3;
+         }
+
+         .badge-danger {
+             background-color: #dc3545;
+             color: #fff;
+             font-weight: 600;
+             padding: 0.4rem 0.6rem;
+             border-radius: 0.25rem;
+         }
+
+         .badge-success {
+             background-color: #28a745;
+             color: #fff;
+             font-weight: 600;
+             padding: 0.4rem 0.6rem;
+             border-radius: 0.25rem;
+         }
+
+         .alert-info {
+             background-color: #e9f8ff;
+             border-color: #bee5eb;
+             color: #155724;
+             padding: 1rem;
+             border-radius: 0.25rem;
+         }
+
+         .table {
+             margin-top: 1.5rem;
+             margin-bottom: 0;
+             border-collapse: collapse;
+             width: 100%;
+         }
+
+         .table th, .table td {
+             padding: 0.75rem;
+             border-bottom: 1px solid #dee2e6;
+             text-align: left;
+         }
+
+         .table thead th {
+             background-color: #f2f2f2;
+             font-weight: 600;
+         }
+
+         /* Custom Styles for Layout */
+         .container {
+             max-width: 960px; /* Adjust as needed */
+             margin-left: auto;
+             margin-right: auto;
+             padding: 1.5rem;
+         }
+
+         .mt-4 {
+             margin-top: 2rem !important;
+         }
+
+         .mt-3 {
+             margin-top: 1rem !important; /* Reduced margin for the h1 */
+         }
+
+         .text-center {
+             text-align: center !important;
+         }
+
+         /* Logo Styling */
+         img[alt="Logo"] {
+             display: block;
+             margin: 0 auto 1rem; /* Center logo with margin below */
+             height: auto !important; /* Ensure responsiveness */
+             max-height: 150px; /* Limit maximum height */
+         }
+
+         /* Form Row Spacing */
+         .row {
+             margin-bottom: 1.5rem;
+         }
+
+         /* Prediction Result Section */
+         #result h2 {
+             margin-top: 2rem;
+             margin-bottom: 1rem;
+         }
+     </style>
+ </head>
+
+ <body>
+     <div class="container text-center mt-4">
+         <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+         <h1 class="mt-3">nefrikinoso: early stage CKD prediction</h1>
+     </div>
+
+     <div class="container mt-2"> <form method="POST" action="/">
+             <div class="row">
+                 {% for feature in feature_order %}
+                     {% if feature != 'stage' %}
+                         <div class="col-md-4">
+                             <div class="form-group">
+                                 <label for="{{ feature }}">
+                                     {{ display_names.get(feature, feature.replace('_', ' ').capitalize()).replace('\n', '<br>') | safe }}
+                                 </label>
+                                 <input type="text" class="form-control" id="{{ feature }}" name="{{ feature }}" required>
+                             </div>
+                         </div>
+                     {% endif %}
+                 {% endfor %}
+             </div>
+             <button type="submit" class="btn btn-primary">Get Prediction</button>
+         </form>
+
+         <div id="result" class="mt-4">
+             {% if predictions %}
+                 <h2>Prediction Result:</h2>
+                 <table class="table table-bordered">
+                     <thead>
+                         <tr>
+                             <th>Model</th>
+                             <th>Prediction</th>
+                         </tr>
+                     </thead>
+                     <tbody>
+                         <tr>
+                             <td>Stacked Ensemble Learning</td>
+                             <td>{{ predictions['Stacked Ensemble Learning'] }}</td>
+                         </tr>
+                     </tbody>
+                 </table>
+             {% endif %}
+
+             {% if final_conclusion %}
+                 <div class="alert alert-info">
+                     <h5 class="mb-0">
+                         Final Conclusion:&nbsp;
+                         {% if final_conclusion == 'CKD' %}
+                             <span class="badge badge-danger">{{ final_conclusion }}</span>
+                         {% else %}
+                             <span class="badge badge-success">{{ final_conclusion }}</span>
+                         {% endif %}
+                     </h5>
+                 </div>
+             {% endif %}
+         </div>
+     </div>
+
+     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+ </body>
+
+ </html>
