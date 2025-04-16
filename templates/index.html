@@ -4,13 +4,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>CKD Prediction</title>
+    <title>nefrikinoso</title>
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
 </head>
 
 <body>
     <div class="container">
-        <h1 class="mt-4 mb-4">CKD Prediction App</h1>
+        <h1 class="mt-4 mb-4">nefrikinoso: early stage CKD prediction</h1>
         <form method="POST" action="/">
             <div class="row">
                 {% for feature in feature_order %}
@@ -18,14 +18,14 @@
                         <div class="col-md-4">
                             <div class="form-group">
                                 <label for="{{ feature }}">
-                                    {{ display_names.get(feature, feature.replace('_', ' ').capitalize()) }}
+                                    {{ display_names.get(feature, feature.replace('_', ' ').capitalize()).replace('\n', '<br>') | safe }}
                                 </label>
                                 <input type="text" class="form-control" id="{{ feature }}" name="{{ feature }}" required>
                             </div>
                         </div>
                     {% endif %}
                 {% endfor %}
-            </div>            
+            </div>
             <button type="submit" class="btn btn-primary">Get Prediction</button>
         </form>
 
