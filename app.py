@@ -5,10 +5,12 @@ from flask import Flask, render_template, request, jsonify
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import recall_score
+import json  # Import the json module
 
 # Constants
 dataset_path = "ckd_prediction_dataset.csv"
 model_dir = "models"
+recall_file_path = "recall_values.json"  # Path to the recall values JSON
 
 # Ensure model directory exists
 os.makedirs(model_dir, exist_ok=True)
@@ -63,8 +65,8 @@ model_classes = {
     "Random Forest": RandomForestModel,
     "Gradient Boosting": GradientBoostModel,
     "CatBoost": CatBoostCKDModel,
-    "Stacked Ensemble": StackedEnsembleModel,
-    "Voting Ensemble": CKDEnsembleModel
+    "Stacked Ensemble Learning": StackedEnsembleModel,
+    "Voting": CKDEnsembleModel                      
 }
 
 models = {}
