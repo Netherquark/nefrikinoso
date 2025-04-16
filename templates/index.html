@@ -36,7 +36,7 @@
 
     <!-- Results Table Card -->
     {% if model_names %}
-    <div class="card">
+    <div class="card mb-3">
       <div class="card-header">
         Model Predictions &amp; Recall
       </div>
@@ -45,9 +45,9 @@
           <table class="table table-striped mb-0">
             <thead class="table-light">
               <tr>
-                <th scope="col">Model</th>
-                <th scope="col">Prediction</th>
-                <th scope="col">Recall</th>
+                <th>Model</th>
+                <th>Prediction</th>
+                <th>Recall</th>
               </tr>
             </thead>
             <tbody>
@@ -75,6 +75,20 @@
         </div>
       </div>
     </div>
+
+    <!-- Final Conclusion -->
+    {% if final_conclusion %}
+    <div class="alert alert-info">
+      <h5 class="mb-0">
+        Final Conclusion:&nbsp;
+        {% if final_conclusion == 'CKD' %}
+          <span class="badge bg-danger">{{ final_conclusion }}</span>
+        {% else %}
+          <span class="badge bg-success">{{ final_conclusion }}</span>
+        {% endif %}
+      </h5>
+    </div>
+    {% endif %}
     {% endif %}
   </div>
 

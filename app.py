@@ -32,8 +32,7 @@ encoders = {}
 for col in cat_cols:
     _df[col] = _df[col].astype(str).str.strip().str.lower()
     default_labels[col] = _df[col].mode()[0]
-    le = LabelEncoder().fit(_df[col])
-    encoders[col] = le
+    encoders[col] = LabelEncoder().fit(_df[col])
 
 # Fit scaler on all features (numerical + encoded categorical)
 _df_enc = _df.copy()
@@ -81,7 +80,7 @@ for name, cls in model_classes.items():
         joblib.dump(m.model, path)
         models[name] = m.model
 
-# Compute recall for each model on a held‐out 20% split
+# Compute recall for each model on a held‑out 20% split
 _df_eval = pd.read_csv(dataset_path)
 _df_eval.drop(columns=[c for c in ['affected','age_avg','stage'] if c in _df_eval.columns],
               inplace=True, errors='ignore')
@@ -110,6 +109,8 @@ for name, model in models.items():
 @app.route('/', methods=['GET','POST'])
 def index():
     predictions = {}
+    final_conclusion = None
+
     if request.method == 'POST':
         # Collect form data
         user_data = {feat: request.form.get(feat,'').strip().lower() for feat in all_features}
@@ -130,15 +131,22 @@ def index():
             try:
                 p = model.predict(X_input)[0]
                 predictions[name] = "CKD" if p==0 else "NOT_CKD"
-            except Exception as e:
-                predictions[name] = f"Error"
+            except Exception:
+                predictions[name] = "Error"
+
+        # Determine final conclusion by model with highest recall
+        valid = {m: r for m, r in recalls.items() if r is not None}
+        if valid:
+            best_model = max(valid, key=valid.get)
+            final_conclusion = predictions.get(best_model)
 
     return render_template(
         'index.html',
         predictions=predictions or None,
         recalls=recalls,
         model_names=list(models.keys()),
-        feature_order=all_features
+        feature_order=all_features,
+        final_conclusion=final_conclusion
     )
 
 @app.route('/api/predict', methods=['POST'])
