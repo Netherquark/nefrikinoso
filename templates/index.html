@@ -10,16 +10,20 @@
 
 <body>
     <div class="container">
-        <h1 class="mt-4 mb-4">CKD Prediction Form</h1>
+        <h1 class="mt-4 mb-4">CKD Prediction App</h1>
         <form method="POST" action="/">
-            {% for feature in feature_order %}
-            {% if feature != 'stage' %}
-            <div class="form-group">
-                <label for="{{ feature }}">{{ feature|capitalize }}</label>
-                <input type="text" class="form-control" id="{{ feature }}" name="{{ feature }}" required>
+            <div class="row">
+                {% for feature in feature_order %}
+                {% if feature != 'stage' %}
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="{{ feature }}">{{ feature|capitalize }}</label>
+                        <input type="text" class="form-control" id="{{ feature }}" name="{{ feature }}" required>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
             </div>
-            {% endif %}
-            {% endfor %}
             <button type="submit" class="btn btn-primary">Get Prediction</button>
         </form>
 
