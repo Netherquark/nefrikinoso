@@ -16,17 +16,53 @@ os.makedirs(model_dir, exist_ok=True)
 # Initialize Flask App
 app = Flask(__name__)
 
+# Define the display mapping for GUI labels.
+# Note: The keys below exactly match the internal column names so that
+# the UI uses the improved display names without affecting internal logic.
+display_names = {
+    "bp (Diastolic)": "Blood Pressure (Diastolic)",
+    "bp limit": "Blood Pressure Limit",
+    "sg": "Specific Gravity",
+    "al": "Albumin Level",
+    "rbc": "Red Blood Cells",
+    "su": "Sugar Level",
+    "pc": "Pus Cells",
+    "pcc": "Pus Cell Clumps",
+    "ba": "Bacteria Presence",
+    "bgr": "Blood Glucose (Random)",
+    "bu": "Blood Urea",
+    "sod": "Sodium Level",
+    "sc": "Serum Creatinine",
+    "pot": "Potassium Level",
+    "hemo": "Hemoglobin",
+    "pcv": "Packed Cell Volume",
+    "rbcc": "Red Blood Cell Count",
+    "wbcc": "White Blood Cell Count",
+    "htn": "Hypertension",
+    "dm": "Diabetes Mellitus",
+    "cad": "Coronary Artery Disease",
+    "appet": "Appetite",
+    "pe": "Pedal Edema",
+    "ane": "Anemia",
+    "grf": "Glomerular Filtration Rate",
+    "age": "Age (in Years)"
+}
+
+
 # Load full dataset to fit encoders and scaler
 _df = pd.read_csv(dataset_path)
 _df.drop(columns=[col for col in ['affected', 'age_avg', 'stage'] if col in _df.columns],
          inplace=True, errors='ignore')
 
+# Use the column names as they are.
 all_features = [c for c in _df.columns if c != 'class' and c != 'stage']
+
+# Define categorical and numerical features as before
 cat_cols = ['rbc', 'pc', 'pcc', 'ba', 'htn', 'dm', 'cad', 'appet', 'pe', 'ane', 'grf', 'sex', 'hypertension']
 cat_cols = [c for c in cat_cols if c in all_features]
 num_cols = [c for c in all_features if c not in cat_cols]
 
-# Label Encoding
+# Label Encoding for categorical variables
 default_labels = {}
 encoders = {}
 for col in cat_cols:
@@ -44,7 +80,7 @@ for col, le in encoders.items():
 scaler = StandardScaler()
 scaler.fit(_df_enc[all_features])
 
-# Import Models
+# Import Models (internal model file names remain unchanged)
 from XGBoost import XGBoostModel
 from SVM import SVMModel
 from Decision_tree import DecisionTreeModel
@@ -98,20 +134,22 @@ def evaluate_model_roc_auc(model):
 best_model_name = max(models, key=lambda name: evaluate_model_roc_auc(models[name]))
 best_model = models[best_model_name]
 
-
 @app.route('/', methods=['GET', 'POST'])
 def index():
     final_conclusion = None
+    predictions = {}
 
     if request.method == 'POST':
         user_data = {feat: request.form.get(feat, '').strip().lower() for feat in all_features}
         df_input = pd.DataFrame([user_data], columns=all_features)
 
+        # Process categorical features
         for col, le in encoders.items():
             vals = df_input[col].astype(str).str.strip().str.lower()
             df_input[col] = [v if v in le.classes_ else default_labels[col] for v in vals]
             df_input[col] = le.transform(df_input[col])
 
+        # Process numerical features
         for col in num_cols:
             try:
                 df_input[col] = df_input[col].astype(float)
@@ -122,8 +160,13 @@ def index():
         pred = best_model.predict(X_input)[0]
         final_conclusion = "CKD" if pred == 0 else "NOT_CKD"
 
-    return render_template('index.html', feature_order=all_features, final_conclusion=final_conclusion)
-
+    return render_template(
+        'index.html', 
+        feature_order=all_features, 
+        final_conclusion=final_conclusion,
+        display_names=display_names,
+        predictions=predictions
+    )
 
 @app.route('/api/predict', methods=['POST'])
 def api_predict():
@@ -142,7 +185,6 @@ def api_predict():
     pred = best_model.predict(X_input)[0]
     result = "CKD" if pred == 0 else "NOT_CKD"
     return jsonify({"result": result})
-
 
 if __name__ == '__main__':
     app.run(debug=True)

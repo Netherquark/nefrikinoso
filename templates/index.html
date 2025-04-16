@@ -14,49 +14,51 @@
         <form method="POST" action="/">
             <div class="row">
                 {% for feature in feature_order %}
-                {% if feature != 'stage' %}
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label for="{{ feature }}">{{ feature|capitalize }}</label>
-                        <input type="text" class="form-control" id="{{ feature }}" name="{{ feature }}" required>
-                    </div>
-                </div>
-                {% endif %}
+                    {% if feature != 'stage' %}
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="{{ feature }}">
+                                    {{ display_names.get(feature, feature.replace('_', ' ').capitalize()) }}
+                                </label>
+                                <input type="text" class="form-control" id="{{ feature }}" name="{{ feature }}" required>
+                            </div>
+                        </div>
+                    {% endif %}
                 {% endfor %}
-            </div>
+            </div>            
             <button type="submit" class="btn btn-primary">Get Prediction</button>
         </form>
 
         <div id="result" class="mt-4">
             {% if predictions %}
-            <h2>Prediction Result:</h2>
-            <table class="table table-bordered">
-                <thead>
-                    <tr>
-                        <th>Model</th>
-                        <th>Prediction</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Stacked Ensemble Learning</td>
-                        <td>{{ predictions['Stacked Ensemble Learning'] }}</td>
-                    </tr>
-                </tbody>
-            </table>
+                <h2>Prediction Result:</h2>
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>Prediction</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Stacked Ensemble Learning</td>
+                            <td>{{ predictions['Stacked Ensemble Learning'] }}</td>
+                        </tr>
+                    </tbody>
+                </table>
             {% endif %}
 
             {% if final_conclusion %}
-            <div class="alert alert-info">
-                <h5 class="mb-0">
-                    Final Conclusion:&nbsp;
-                    {% if final_conclusion == 'CKD' %}
-                    <span class="badge badge-danger">{{ final_conclusion }}</span>
-                    {% else %}
-                    <span class="badge badge-success">{{ final_conclusion }}</span>
-                    {% endif %}
-                </h5>
-            </div>
+                <div class="alert alert-info">
+                    <h5 class="mb-0">
+                        Final Conclusion:&nbsp;
+                        {% if final_conclusion == 'CKD' %}
+                            <span class="badge badge-danger">{{ final_conclusion }}</span>
+                        {% else %}
+                            <span class="badge badge-success">{{ final_conclusion }}</span>
+                        {% endif %}
+                    </h5>
+                </div>
             {% endif %}
         </div>
     </div>
