@@ -71,7 +71,8 @@
 
          .form-control:focus {
              border-color: var(--primary-color);
-             box-shadow: 0 0 0 0.2rem rgba(32, 201, 151, 0.25); /* Focus shadow */
+             box-shadow: 0 0 0.75rem rgba(32, 201, 151, 0.7); /* More intense glow */
+             border-width: 1.5px; /* Slightly thicker border */
          }
 
          .btn-primary {
@@ -157,7 +158,21 @@
          }
 
          .mt-2 {
+             opacity: 0;
+             transform: translateY(20px);
+             animation: fadeIn 0.5s ease-out 0.2s forwards;
              margin-top: 0.5rem !important; /* Further reduced margin for form container */
+         }
+
+         @keyframes fadeIn {
+             from {
+                 opacity: 0;
+                 transform: translateY(20px);
+             }
+             to {
+                 opacity: 1;
+                 transform: translateY(0);
+             }
          }
 
          .text-center {
@@ -266,6 +281,30 @@
      <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
      <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
      <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+     <script>
+         const inputFields = document.querySelectorAll('.form-control');
+         const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
+         const originalLabelColor = '#495057';
+         const originalLabelWeight = '500';
+
+         inputFields.forEach(input => {
+             input.addEventListener('focus', () => {
+                 const label = document.querySelector(`label[for="${input.id}"]`);
+                 if (label) {
+                     label.style.fontWeight = '700'; // Make label bolder (increased boldness)
+                     label.style.color = primaryColor; // Change label color to primary
+                 }
+             });
+
+             input.addEventListener('blur', () => {
+                 const label = document.querySelector(`label[for="${input.id}"]`);
+                 if (label) {
+                     label.style.fontWeight = originalLabelWeight; // Revert to original font weight
+                     label.style.color = originalLabelColor; // Revert label color
+                 }
+             });
+         });
+     </script>
  </body>
 
  </html>
