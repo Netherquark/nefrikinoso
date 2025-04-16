@@ -55,6 +55,31 @@
                     </table>
                 {% endif %}
             {% endif %}
+
+            {% if final_conclusion %}
+                <div class="alert alert-info">
+                    <h5 class="mb-0">
+                        Final Conclusion:&nbsp;
+                        {% if final_conclusion == 'CKD' %}
+                            <span class="badge bg-danger">{{ final_conclusion }}</span>
+                        {% else %}
+                            <span class="badge bg-success">{{ final_conclusion }}</span>
+                        {% endif %}
+                    </h5>
+                </div>
+                {% if conclusion_model_name %}
+                    <p class="mt-2">
+                        The final conclusion was derived using the <b>{{ conclusion_model_name }}</b> algorithm, which has an average recall score of
+                        <b>
+                            {% if conclusion_recall %}
+                                {{ conclusion_recall }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </b>.
+                    </p>
+                {% endif %}
+            {% endif %}
         </div>
     </div>
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>

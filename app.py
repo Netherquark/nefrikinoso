@@ -90,6 +90,9 @@ for name, cls in model_classes.items():
 def index():
     predictions = {}
     recall_data = {}  # Initialize an empty dictionary for recall data
+    final_conclusion = None
+    conclusion_model_name = None
+    conclusion_recall = None
 
     if request.method == 'POST':
         # Collect user input
@@ -130,10 +133,40 @@ def index():
         except json.JSONDecodeError:
             print(f"Warning: Could not decode JSON from '{recall_file_path}'.")
 
-        return render_template('index.html', predictions=predictions, feature_order=all_features, recall_data=recall_data)
+        best_recall = -1
+        best_recall_model = None
+
+        # Determine the model with the highest average recall
+        for model_name, recalls in recall_data.items():
+            if '0' in recalls and '1' in recalls:
+                avg_recall = (recalls['0'] + recalls['1']) / 2
+                if avg_recall > best_recall and model_name in predictions:
+                    best_recall = avg_recall
+                    best_recall_model = model_name
+
+        # Set the final conclusion based on the best recall model
+        if best_recall_model:
+            final_conclusion = predictions[best_recall_model]
+            conclusion_model_name = best_recall_model
+            conclusion_recall = round(best_recall, 4)
+        elif predictions:
+            # Fallback to the first model if no recall data is available for any predicted model
+            first_model_name = list(predictions.keys())[0]
+            final_conclusion = predictions[first_model_name]
+            conclusion_model_name = first_model_name
+            if recall_data and conclusion_model_name in recall_data and '0' in recall_data[conclusion_model_name] and '1' in recall_data[conclusion_model_name]:
+                conclusion_recall = round(((recall_data[conclusion_model_name]['0'] + recall_data[conclusion_model_name]['1']) / 2), 4)
+            else:
+                conclusion_recall = "N/A"
+        else:
+            final_conclusion = "N/A"
+            conclusion_model_name = "N/A"
+            conclusion_recall = "N/A"
+
+        return render_template('index.html', predictions=predictions, feature_order=all_features, recall_data=recall_data, final_conclusion=final_conclusion, conclusion_model_name=conclusion_model_name, conclusion_recall=conclusion_recall)
 
     # GET request
-    return render_template('index.html', predictions=None, feature_order=all_features, recall_data={})
+    return render_template('index.html', predictions=None, feature_order=all_features, recall_data={}, final_conclusion=None, conclusion_model_name=None, conclusion_recall=None)
 
 @app.route('/api/predict', methods=['POST'])
 def api_predict():
