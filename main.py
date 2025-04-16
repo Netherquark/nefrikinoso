@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 import time
+import json
 
 from predict_ckd import CKDPredictor
 from XGBoost import XGBoostModel
@@ -19,6 +20,7 @@ from voting_ensemble import CKDEnsembleModel
 from sklearn.metrics import classification_report, confusion_matrix
 
 DATASET_PATH = "ckd_prediction_dataset.csv"
+RECALL_OUTPUT_PATH = "recall_values.json"
 
 def run_and_collect(model_class, model_name):
     model = model_class(DATASET_PATH)
@@ -68,7 +70,7 @@ def plot_classification_report_dashboard(reports):
                     "Recall": metrics["recall"],
                     "F1-Score": metrics["f1-score"]
                 })
-    
+
     df = pd.DataFrame(rows)
     fig, axes = plt.subplots(1, 3, figsize=(20, 6))
 
@@ -147,6 +149,7 @@ def main():
     results = []
     detailed_reports = []
     model_objects = {}
+    recall_values = {}
 
     models_to_run = [
         (XGBoostModel, "XGBoost"),
@@ -198,6 +201,15 @@ def main():
                 "ROC_AUC": scores["ROC_AUC"],
                 "Training_Time": training_time
             })
+
+            # Extract recall values
+            clf_report = classification_report(y_true, y_pred, output_dict=True)
+            model_recall = {}
+            for label, metrics in clf_report.items():
+                if label not in ['accuracy', 'macro avg', 'weighted avg']:
+                    model_recall[label] = metrics['recall']
+            recall_values[model_name] = model_recall
+
         except Exception as e:
             print(f" Error in {model_name}: {e}")
 
@@ -205,6 +217,12 @@ def main():
 
     print("\n Final Comparison Table:")
     print(results_df.sort_values(by="Accuracy", ascending=False))
+
+    # Save recall values to JSON
+    with open(RECALL_OUTPUT_PATH, 'w') as f:
+        json.dump(recall_values, f, indent=4)
+
+    print(f"\nRecall values for each model saved to '{RECALL_OUTPUT_PATH}'")
 
     # Metric Charts
     plot_metric_bar(results_df, "Accuracy", "crest")
