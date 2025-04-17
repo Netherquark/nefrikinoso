@@ -3,7 +3,7 @@ import seaborn as sns
 import pandas as pd
 import time
 import json
-import pickle  # To save the best model
+import pickle
 
 from predict_ckd import CKDPredictor
 from XGBoost import XGBoostModel
@@ -20,212 +20,174 @@ from voting_ensemble import VotingEnsembleModel
 
 from sklearn.metrics import classification_report, confusion_matrix
 
-DATASET_PATH = "ckd_prediction_dataset.csv"
-# Updated constant: saving ROC AUC values instead of recall values
-ROC_AUC_OUTPUT_PATH = "roc_auc_values.json"
-BEST_MODEL_PATH = "best_model.pkl"
-FEATURE_ORDER_PATH = "feature_order.json"
+class CKDModelRunner:
+    def __init__(self, dataset_path, roc_auc_path="roc_auc_values.json", best_model_path="best_model.pkl"):
+        self.dataset_path = dataset_path
+        self.roc_auc_path = roc_auc_path
+        self.best_model_path = best_model_path
+        self.reports = []
+        self.results = []
+        self.model_objects = {}
+        self.roc_auc_values = {}
 
-def run_and_collect(model_class, model_name):
-    model = model_class(DATASET_PATH)
+        self.models_to_run = [
+            (XGBoostModel, "XGBoost"),
+            (SVMModel, "SVM"),
+            (DecisionTreeModel, "Decision Tree"),
+            (LogisticRegressionModel, "Logistic Regression"),
+            (KNNModel, "K-Nearest Neighbors"),
+            (NaiveBayesModel, "Naive Bayes"),
+            (RandomForestModel, "Random Forest"),
+            (GradientBoostModel, "Gradient Boosting"),
+            (CatBoostCKDModel, "CatBoost"),
+            (StackedEnsembleModel, "Stacked Ensemble Learning"),
+            (VotingEnsembleModel, "Voting")
+        ]
 
-    model.preprocess_data()
-    model.train_test_split()
+    def run_all_models(self):
+        for model_class, model_name in self.models_to_run:
+            print(f"\n Running {model_name}...")
+            try:
+                model = model_class(self.dataset_path)
+                model.preprocess_data()
+                model.train_test_split()
 
-    start_time = time.time()
-    model.train_model()
-    end_time = time.time()
+                start_time = time.time()
+                model.train_model()
+                training_time = time.time() - start_time
 
-    training_time = end_time - start_time
-    scores = model.evaluate_model(return_scores=True)
-    scores['Model'] = model_name
-    scores['Training_Time'] = training_time
+                scores = model.evaluate_model(return_scores=True)
+                scores['Model'] = model_name
+                scores['Training_Time'] = training_time
 
-    # Predictions
-    y_true, y_pred = model.y_test, model.model.predict(model.X_test)
-    scores['y_true'] = y_true
-    scores['y_pred'] = y_pred
+                y_true, y_pred = model.y_test, model.model.predict(model.X_test)
+                scores['y_true'] = y_true
+                scores['y_pred'] = y_pred
 
-    # Feature Importances
-    try:
-        importances = None
-        if hasattr(model.model, 'feature_importances_'):
-            importances = model.model.feature_importances_
-        elif hasattr(model.model, 'coef_'):
-            importances = abs(model.model.coef_[0])
-        if importances is not None:
-            feature_names = model.X.columns
-            scores['Feature_Importances'] = pd.Series(importances, index=feature_names).sort_values(ascending=False)
-    except:
-        pass
+                self.model_objects[model_name] = model.model
 
-    return scores
+                if hasattr(model.model, 'feature_importances_'):
+                    importances = model.model.feature_importances_
+                    scores['Feature_Importances'] = pd.Series(importances, index=model.X.columns).sort_values(ascending=False)
+                elif hasattr(model.model, 'coef_'):
+                    importances = abs(model.model.coef_[0])
+                    scores['Feature_Importances'] = pd.Series(importances, index=model.X.columns).sort_values(ascending=False)
 
-def plot_classification_report_dashboard(reports):
-    rows = []
-    for report in reports:
-        clf_report = classification_report(report['y_true'], report['y_pred'], output_dict=True)
-        for label, metrics in clf_report.items():
-            if label not in ['accuracy', 'macro avg', 'weighted avg']:
-                rows.append({
-                    "Model": report["Model"],
-                    "Class": label,
-                    "Precision": metrics["precision"],
-                    "Recall": metrics["recall"],
-                    "F1-Score": metrics["f1-score"]
+                self.reports.append(scores)
+                self.results.append({
+                    "Model": model_name,
+                    "Accuracy": scores["Accuracy"],
+                    "ROC_AUC": scores["ROC_AUC"],
+                    "Training_Time": training_time
                 })
+                self.roc_auc_values[model_name] = scores["ROC_AUC"]
+                self.feature_order = list(model.X.columns)
 
-    df = pd.DataFrame(rows)
-    fig, axes = plt.subplots(1, 3, figsize=(20, 6))
+            except Exception as e:
+                print(f" Error in {model_name}: {e}")
 
-    sns.barplot(data=df, x="F1-Score", y="Model", hue="Class", ax=axes[0])
-    axes[0].set_title("F1-Score Comparison by Class")
+        self.results_df = pd.DataFrame(self.results)
+        print("\n Final Comparison Table:")
+        print(self.results_df.sort_values(by="Accuracy", ascending=False))
 
-    sns.barplot(data=df, x="Precision", y="Model", hue="Class", ax=axes[1])
-    axes[1].set_title("Precision Comparison by Class")
+    def save_roc_auc(self):
+        with open(self.roc_auc_path, 'w') as f:
+            json.dump(self.roc_auc_values, f, indent=4)
+        print(f"\nROC AUC values saved to '{self.roc_auc_path}'")
 
-    sns.barplot(data=df, x="Recall", y="Model", hue="Class", ax=axes[2])
-    axes[2].set_title("Recall Comparison by Class")
+    def plot_metrics(self):
+        self.plot_metric_bar("Accuracy", "crest")
+        self.plot_metric_bar("ROC_AUC", "viridis")
+        self.plot_metric_bar("Training_Time", "magma")
+        self.plot_classification_report()
+        self.plot_confusion_matrices()
 
-    for ax in axes:
-        ax.set_xlabel("")
-        ax.set_ylabel("")
-        ax.legend(title='Class', loc='lower right')
+    def plot_metric_bar(self, metric, palette):
+        plt.figure(figsize=(10, 6))
+        sns.barplot(x=metric, y="Model", data=self.results_df.sort_values(by=metric, ascending=False), palette=palette)
+        plt.title(f"{metric} Comparison")
+        plt.xlabel(metric)
+        plt.ylabel("Model")
+        plt.tight_layout()
+        plt.show()
 
-    plt.tight_layout()
-    plt.show()
+    def plot_classification_report(self):
+        rows = []
+        for report in self.reports:
+            clf_report = classification_report(report['y_true'], report['y_pred'], output_dict=True)
+            for label, metrics in clf_report.items():
+                if label not in ['accuracy', 'macro avg', 'weighted avg']:
+                    rows.append({
+                        "Model": report["Model"],
+                        "Class": label,
+                        "Precision": metrics["precision"],
+                        "Recall": metrics["recall"],
+                        "F1-Score": metrics["f1-score"]
+                    })
 
-def plot_confusion_matrices(reports):
-    n_models = len(reports)
-    cols = 3
-    rows = (n_models + cols - 1) // cols
-    fig, axes = plt.subplots(rows, cols, figsize=(6 * cols, 5 * rows))
+        df = pd.DataFrame(rows)
+        fig, axes = plt.subplots(1, 3, figsize=(20, 6))
 
-    for i, report in enumerate(reports):
-        cm = confusion_matrix(report['y_true'], report['y_pred'])
-        ax = axes[i // cols, i % cols] if rows > 1 else axes[i]
-        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=ax, cbar=False)
-        ax.set_title(f"{report['Model']}", fontsize=13, fontweight='bold')
-        ax.set_xlabel("Predicted", fontsize=11)
-        ax.set_ylabel("Actual", fontsize=11)
+        sns.barplot(data=df, x="F1-Score", y="Model", hue="Class", ax=axes[0])
+        axes[0].set_title("F1-Score Comparison by Class")
 
-    # Turn off any unused axes
-    for j in range(i + 1, rows * cols):
-        ax = axes[j // cols, j % cols] if rows > 1 else axes[j]
-        ax.axis('off')
+        sns.barplot(data=df, x="Precision", y="Model", hue="Class", ax=axes[1])
+        axes[1].set_title("Precision Comparison by Class")
 
-    plt.suptitle("Confusion Matrices", fontsize=16, fontweight='bold', y=1.02)
-    plt.tight_layout(pad=3.0)
-    plt.subplots_adjust(hspace=0.5, wspace=0.4)
-    plt.show()
+        sns.barplot(data=df, x="Recall", y="Model", hue="Class", ax=axes[2])
+        axes[2].set_title("Recall Comparison by Class")
 
+        for ax in axes:
+            ax.set_xlabel("")
+            ax.set_ylabel("")
+            ax.legend(title='Class', loc='lower right')
 
-def plot_metric_bar(dataframe, metric, palette):
-    plt.figure(figsize=(10, 6))
-    sns.barplot(x=metric, y="Model", data=dataframe.sort_values(by=metric, ascending=False), palette=palette)
-    plt.title(f"{metric} Comparison")
-    plt.xlabel(metric)
-    plt.ylabel("Model")
-    plt.tight_layout()
-    plt.show()
+        plt.tight_layout()
+        plt.show()
 
-def main():
-    results = []
-    detailed_reports = []
-    model_objects = {}
-    # Replace recall_values with roc_auc_values dictionary
-    roc_auc_values = {}
+    def plot_confusion_matrices(self):
+        n_models = len(self.reports)
+        cols = 3
+        rows = (n_models + cols - 1) // cols
+        fig, axes = plt.subplots(rows, cols, figsize=(6 * cols, 5 * rows))
 
-    models_to_run = [
-        (XGBoostModel, "XGBoost"),
-        (SVMModel, "SVM"),
-        (DecisionTreeModel, "Decision Tree"),
-        (LogisticRegressionModel, "Logistic Regression"),
-        (KNNModel, "K-Nearest Neighbors"),
-        (NaiveBayesModel, "Naive Bayes"),
-        (RandomForestModel, "Random Forest"),
-        (GradientBoostModel, "Gradient Boosting"),
-        (CatBoostCKDModel, "CatBoost"),
-        (StackedEnsembleModel, "Stacked Ensemble Learning"),
-        (VotingEnsembleModel, "Voting")
-    ]
+        for i, report in enumerate(self.reports):
+            cm = confusion_matrix(report['y_true'], report['y_pred'])
+            ax = axes[i // cols, i % cols] if rows > 1 else axes[i]
+            sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=ax, cbar=False)
+            ax.set_title(f"{report['Model']}", fontsize=13, fontweight='bold')
+            ax.set_xlabel("Predicted")
+            ax.set_ylabel("Actual")
 
-    for model_class, model_name in models_to_run:
-        print(f"\n Running {model_name}...")
-        try:
-            model = model_class(DATASET_PATH)
-            model.preprocess_data()
-            model.train_test_split()
-            start_time = time.time()
-            model.train_model()
-            end_time = time.time()
+        for j in range(i + 1, rows * cols):
+            ax = axes[j // cols, j % cols] if rows > 1 else axes[j]
+            ax.axis('off')
 
-            training_time = end_time - start_time
-            scores = model.evaluate_model(return_scores=True)
-            scores['Model'] = model_name
-            scores['Training_Time'] = training_time
+        plt.suptitle("Confusion Matrices", fontsize=16, fontweight='bold', y=1.02)
+        plt.tight_layout(pad=3.0)
+        plt.subplots_adjust(hspace=0.5, wspace=0.4)
+        plt.show()
 
-            y_true, y_pred = model.y_test, model.model.predict(model.X_test)
-            scores['y_true'] = y_true
-            scores['y_pred'] = y_pred
+    def get_best_model(self):
+        best_row = self.results_df.sort_values(by="ROC_AUC", ascending=False).iloc[0]
+        best_model_name = best_row["Model"]
+        best_model = self.model_objects[best_model_name]
+        print(f"\nBest model based on ROC AUC: {best_model_name}")
+        return best_model_name, best_model
 
-            # Store model for later use
-            model_objects[model_name] = model.model
+    def predict_from_user_input(self, model):
+        predictor = CKDPredictor(model, self.feature_order)
+        user_data = predictor.get_user_input()
+        prediction = predictor.predict(user_data)
+        print(f"\nPrediction Result: The patient is predicted to have **{prediction}**.")
 
-            if hasattr(model.model, 'feature_importances_'):
-                importances = model.model.feature_importances_
-                scores['Feature_Importances'] = pd.Series(importances, index=model.X.columns).sort_values(ascending=False)
-            elif hasattr(model.model, 'coef_'):
-                importances = abs(model.model.coef_[0])
-                scores['Feature_Importances'] = pd.Series(importances, index=model.X.columns).sort_values(ascending=False)
-
-            detailed_reports.append(scores)
-            results.append({
-                "Model": model_name,
-                "Accuracy": scores["Accuracy"],
-                "ROC_AUC": scores["ROC_AUC"],
-                "Training_Time": training_time
-            })
-
-            # Instead of extracting recall values, extract and store the ROC AUC score
-            roc_auc_values[model_name] = scores["ROC_AUC"]
-
-        except Exception as e:
-            print(f" Error in {model_name}: {e}")
-
-    results_df = pd.DataFrame(results)
-
-    print("\n Final Comparison Table:")
-    print(results_df.sort_values(by="Accuracy", ascending=False))
-
-    # Save ROC AUC values to JSON
-    with open(ROC_AUC_OUTPUT_PATH, 'w') as f:
-        json.dump(roc_auc_values, f, indent=4)
-
-    print(f"\nROC AUC values for each model saved to '{ROC_AUC_OUTPUT_PATH}'")
-
-    # Metric Charts
-    plot_metric_bar(results_df, "Accuracy", "crest")
-    plot_metric_bar(results_df, "ROC_AUC", "viridis")
-    plot_metric_bar(results_df, "Training_Time", "magma")
-    plot_classification_report_dashboard(detailed_reports)
-    plot_confusion_matrices(detailed_reports)
-
-    # Get the best model (by ROC_AUC)
-    best_model_row = results_df.sort_values(by="ROC_AUC", ascending=False).iloc[0]
-    best_model_name = best_model_row["Model"]
-    best_model = model_objects[best_model_name]
-
-    print(f"\nUsing best model '{best_model_name}' for CKD prediction from user input...")
-
-    # User input and CKD prediction
-    feature_order = list(model.X.columns)
-    predictor = CKDPredictor(best_model, feature_order)
-
-    user_data = predictor.get_user_input()
-    prediction = predictor.predict(user_data)
-
-    print(f"\n Prediction Result: The patient is predicted to have **{prediction}**.")
+    def run(self):
+        self.run_all_models()
+        self.save_roc_auc()
+        self.plot_metrics()
+        best_model_name, best_model = self.get_best_model()
+        self.predict_from_user_input(best_model)
 
 if __name__ == "__main__":
-    main()
+    runner = CKDModelRunner(dataset_path="ckd_prediction_dataset.csv")
+    runner.run()
