@@ -1,12 +1,12 @@
 {
     "XGBoost": 1.0,
     "SVM": 1.0,
-    "Decision Tree": 1.0,
+    "Decision Tree": 0.9896978021978021,
     "Logistic Regression": 1.0,
     "K-Nearest Neighbors": 1.0,
     "Naive Bayes": 1.0,
     "Random Forest": 1.0,
-    "Gradient Boosting": 1.0,
+    "Gradient Boosting": 0.9993131868131868,
     "CatBoost": 1.0,
     "Stacked Ensemble Learning": 1.0,
     "Voting": 1.0

@@ -3,6 +3,7 @@ import seaborn as sns
 import pandas as pd
 import time
 import json
+import pickle  # To save the best model
 
 from predict_ckd import CKDPredictor
 from XGBoost import XGBoostModel
@@ -22,6 +23,8 @@ from sklearn.metrics import classification_report, confusion_matrix
 DATASET_PATH = "ckd_prediction_dataset.csv"
 # Updated constant: saving ROC AUC values instead of recall values
 ROC_AUC_OUTPUT_PATH = "roc_auc_values.json"
+BEST_MODEL_PATH = "best_model.pkl"
+FEATURE_ORDER_PATH = "feature_order.json"
 
 def run_and_collect(model_class, model_name):
     model = model_class(DATASET_PATH)
@@ -218,6 +221,16 @@ def main():
     # User input and CKD prediction
     feature_order = list(model.X.columns)
     predictor = CKDPredictor(best_model, feature_order)
+
+    # Save the best model
+    with open(BEST_MODEL_PATH, 'wb') as f:
+        pickle.dump(best_model, f)
+    print(f"\nBest model '{best_model_name}' saved to '{BEST_MODEL_PATH}'")
+
+    # Save the feature order
+    with open(FEATURE_ORDER_PATH, 'w') as f:
+        json.dump(feature_order, f, indent=4)
+    print(f"Feature order saved to '{FEATURE_ORDER_PATH}'")
 
     user_data = predictor.get_user_input()
     prediction = predictor.predict(user_data)
