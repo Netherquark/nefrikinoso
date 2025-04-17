@@ -98,7 +98,7 @@ class CKDPredictor:
         prediction = self.model.predict(processed_input)[0]
         return "CKD" if prediction == 0 else "Not CKD"
     
-    def predict_from_input_dict_gui(self, user_input_dict):
+    def predict_from_input_dict(self, user_input_dict):
         # Ensure feature order
         input_df = pd.DataFrame([user_input_dict])[self.feature_order]
         # Preprocess input
