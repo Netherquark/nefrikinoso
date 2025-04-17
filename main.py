@@ -180,6 +180,13 @@ class CKDModelRunner:
         user_data = predictor.get_user_input()
         prediction = predictor.predict(user_data)
         print(f"\nPrediction Result: The patient is predicted to have **{prediction}**.")
+        
+    def predict_from_user_input_gui(self, user_input_dict):
+        model = self.get_best_model()
+        predictor = CKDPredictor(model, self.feature_order)
+        prediction = predictor.predict_from_input_dict(user_input_dict)
+        return prediction
+
 
     def run(self):
         self.run_all_models()
