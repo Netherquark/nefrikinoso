@@ -222,16 +222,6 @@ def main():
     feature_order = list(model.X.columns)
     predictor = CKDPredictor(best_model, feature_order)
 
-    # Save the best model
-    with open(BEST_MODEL_PATH, 'wb') as f:
-        pickle.dump(best_model, f)
-    print(f"\nBest model '{best_model_name}' saved to '{BEST_MODEL_PATH}'")
-
-    # Save the feature order
-    with open(FEATURE_ORDER_PATH, 'w') as f:
-        json.dump(feature_order, f, indent=4)
-    print(f"Feature order saved to '{FEATURE_ORDER_PATH}'")
-
     user_data = predictor.get_user_input()
     prediction = predictor.predict(user_data)
 
