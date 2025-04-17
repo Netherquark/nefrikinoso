@@ -126,26 +126,6 @@ def plot_metric_bar(dataframe, metric, palette):
     plt.tight_layout()
     plt.show()
 
-def plot_all_top_features(reports, top_n=5):
-    combined_features = []
-
-    for report in reports:
-        if "Feature_Importances" in report:
-            top_features = report["Feature_Importances"].head(top_n)
-            for feature, importance in top_features.items():
-                combined_features.append({
-                    "Model": report["Model"],
-                    "Feature": feature,
-                    "Importance": importance
-                })
-
-    df = pd.DataFrame(combined_features)
-    plt.figure(figsize=(12, 7))
-    sns.barplot(x="Importance", y="Feature", hue="Model", data=df, orient='h')
-    plt.title(f"Top {top_n} Features Across Models")
-    plt.tight_layout()
-    plt.show()
-
 def main():
     results = []
     detailed_reports = []
@@ -227,7 +207,6 @@ def main():
     plot_metric_bar(results_df, "Training_Time", "magma")
     plot_classification_report_dashboard(detailed_reports)
     plot_confusion_matrices(detailed_reports)
-    plot_all_top_features(detailed_reports, top_n=5)
 
     # Get the best model (by ROC_AUC)
     best_model_row = results_df.sort_values(by="ROC_AUC", ascending=False).iloc[0]
