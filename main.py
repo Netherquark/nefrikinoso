@@ -4,10 +4,9 @@ import pandas as pd
 import time
 import json
 import pickle
-import logging
 
 from predict_ckd import CKDPredictor
-from XGBoost import XGBoostModel  # Assuming this is where your preprocessing happens
+from XGBoost import XGBoostModel
 from SVM import SVMModel
 from Decision_tree import DecisionTreeModel
 from LogisticRegression import LogisticRegressionModel
@@ -21,15 +20,6 @@ from voting_ensemble import VotingEnsembleModel
 
 from sklearn.metrics import classification_report, confusion_matrix
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
-DATASET_PATH       = "ckd_prediction_dataset.csv"
-BEST_MODEL_PATH    = "best_model.pkl"
-FEATURE_ORDER_PATH = "feature_order.json"
-ENCODER_PATH       = "encoders.pkl"
-SCALER_PATH        = "scaler.pkl"
-
 class CKDModelRunner:
     def __init__(self, dataset_path, roc_auc_path="roc_auc_values.json", best_model_path="best_model.pkl"):
         self.dataset_path = dataset_path
@@ -39,7 +29,7 @@ class CKDModelRunner:
         self.results = []
         self.model_objects = {}
         self.roc_auc_values = {}
-        self.feature_order = [] # Initialize feature order
+        self.results_df = pd.DataFrame()
 
         self.models_to_run = [
             (XGBoostModel, "XGBoost"),
@@ -76,7 +66,6 @@ class CKDModelRunner:
                 scores['y_pred'] = y_pred
 
                 self.model_objects[model_name] = model.model
-                self.feature_order = list(model.X.columns) # Capture feature order from the last model (assuming consistent)
 
                 if hasattr(model.model, 'feature_importances_'):
                     importances = model.model.feature_importances_
@@ -93,33 +82,22 @@ class CKDModelRunner:
                     "Training_Time": training_time
                 })
                 self.roc_auc_values[model_name] = scores["ROC_AUC"]
-
-                # --- Save preprocessing objects if it's the XGBoostModel ---
-                if model_name == "XGBoost":
-                    if hasattr(model, 'encoders'):
-                        with open(ENCODER_PATH, 'wb') as file:
-                            pickle.dump(model.encoders, file)
-                        logging.info(f"Encoders saved to: {ENCODER_PATH}")
-                    else:
-                        logging.warning("XGBoostModel does not have 'encoders' attribute.")
-
-                    if hasattr(model, 'scaler'):
-                        with open(SCALER_PATH, 'wb') as file:
-                            pickle.dump(model.scaler, file)
-                        logging.info(f"Scaler saved to: {SCALER_PATH}")
-                    else:
-                        logging.warning("XGBoostModel does not have 'scaler' attribute.")
-                    # Save feature order when XGBoost is processed
-                    with open(FEATURE_ORDER_PATH, "w") as f:
-                        json.dump(self.feature_order, f)
-                    logging.info(f"Feature order saved to: {FEATURE_ORDER_PATH}")
+                self.feature_order = list(model.X.columns)
 
             except Exception as e:
                 print(f" Error in {model_name}: {e}")
 
+        # Build the DataFrame
         self.results_df = pd.DataFrame(self.results)
-        print("\n Final Comparison Table:")
+
+        # Normalize the ROC column name
+        if 'roc_auc' in self.results_df.columns:
+            self.results_df.rename(columns={'roc_auc':'ROC_AUC'}, inplace=True)
+
+        # Debugging: print normalized columns
+        print("\nFinal Comparison Table (normalized):")
         print(self.results_df.sort_values(by="Accuracy", ascending=False))
+        print("Columns now:", self.results_df.columns.tolist())
 
     def save_roc_auc(self):
         with open(self.roc_auc_path, 'w') as f:
@@ -211,10 +189,12 @@ class CKDModelRunner:
         user_data = predictor.get_user_input()
         prediction = predictor.predict(user_data)
         print(f"\nPrediction Result: The patient is predicted to have **{prediction}**.")
-
+        
     def predict_from_user_input_gui(self, user_input_dict):
-        model_name, model = self.get_best_model()
-        predictor = CKDPredictor(model, self.feature_order)
+        self.run_all_models()
+        self.save_roc_auc()
+        model, best_model = self.get_best_model()
+        predictor = CKDPredictor(best_model, self.feature_order)
         prediction = predictor.predict_from_input_dict(user_input_dict)
         return prediction
 
@@ -224,7 +204,7 @@ class CKDModelRunner:
         self.save_roc_auc()
         self.plot_metrics()
         best_model_name, best_model = self.get_best_model()
-        # self.predict_from_user_input(best_model) # You can keep this if you want user input from terminal
+        self.predict_from_user_input(best_model)
 
 if __name__ == "__main__":
     runner = CKDModelRunner(dataset_path="ckd_prediction_dataset.csv")
