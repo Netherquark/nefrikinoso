@@ -26,4 +26,4 @@ jobs:
           context: .
           file: Dockerfile
           push: true
-          tags: netherquark/nefrikinoso:beta
+          tags: netherquark/nefrikinoso:latest
