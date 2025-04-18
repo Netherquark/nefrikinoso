@@ -1,310 +1,290 @@
 <!DOCTYPE html>
- <html lang="en">
+<html lang="en">
 
- <head>
-     <meta charset="UTF-8">
-     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-     <title>nefrikinoso</title>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>CKD Prediction</title>
 
-     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
 
-     <link rel="preconnect" href="https://fonts.googleapis.com">
-     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
 
-     <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
 
-     <style>
-         /* Color Palette */
-         :root {
-             --primary-color: #20c997; /* Teal */
-             --secondary-color: #f8f9fa; /* Light Grey */
-             --accent-color: #28a745; /* Green */
-             --text-dark: #343a40;
-             --heading-dark: #212529;
-             --border-color: #ced4da;
-         }
+    <style>
+        /* Color Palette */
+        :root {
+            --primary-color: #20c997;
+            --secondary-color: #f8f9fa;
+            --accent-color: #28a745;
+            --text-dark: #343a40;
+            --heading-dark: #212529;
+            --border-color: #ced4da;
+        }
 
-         body {
-             font-family: 'Inter', sans-serif;
-             background-color: var(--secondary-color);
-             color: var(--text-dark);
-             line-height: 1.6;
-         }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--secondary-color);
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
 
-         /* Typography Hierarchy */
-         h1, h2, h3, h4, h5, h6 {
-             font-weight: 700; /* Bold for headings */
-             color: var(--heading-dark); /* Darker grey for headings */
-             margin-bottom: 0.75rem;
-         }
+        h1, h2, h3, h4, h5, h6 {
+            font-weight: 700;
+            color: var(--heading-dark);
+            margin-bottom: 0.75rem;
+        }
 
-         h1 {
-             font-size: 2.5rem;
-         }
+        h1 {
+            font-size: 2.5rem;
+        }
 
-         h2 {
-             font-size: 2rem;
-         }
+        label {
+            font-weight: 500;
+            color: #495057;
+            margin-bottom: 0.3rem;
+            display: block;
+        }
 
-         label {
-             font-weight: 500; /* Medium weight for labels */
-             color: #495057;
-             margin-bottom: 0.3rem;
-             display: block; /* Ensure labels are above inputs */
-         }
+        .form-control {
+            font-size: 1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 0.3rem;
+            border: 1px solid var(--border-color);
+        }
 
-         .label-description {
-             display: block; /* Ensure it's on its own line */
-             font-size: 0.85rem;
-             color: #6c757d; /* Lighter grey */
-             font-weight: 400; /* Regular weight */
-             margin-top: 0.1rem;
-         }
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0.75rem rgba(32, 201, 151, 0.7);
+            border-width: 1.5px;
+        }
 
-         .form-control {
-             font-size: 1rem;
-             padding: 0.75rem 1rem;
-             border-radius: 0.3rem; /* Rounded corners */
-             border: 1px solid var(--border-color);
-         }
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            color: #fff;
+            font-weight: 600;
+            padding: 0.8rem 1.5rem;
+            border-radius: 0.3rem;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease-in-out;
+        }
 
-         .form-control:focus {
-             border-color: var(--primary-color);
-             box-shadow: 0 0 0.75rem rgba(32, 201, 151, 0.7); /* More intense glow */
-             border-width: 1.5px; /* Slightly thicker border */
-         }
+        .btn-primary:hover {
+            background-color: #18a680;
+            border-color: #18a680;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+            transform: scale(1.02);
+        }
 
-         .btn-primary {
-             background-color: var(--primary-color);
-             border-color: var(--primary-color);
-             color: #fff;
-             font-weight: 600;
-             padding: 0.8rem 1.5rem;
-             border-radius: 0.3rem;
-             transition: background-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease-in-out;
-             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-         }
+        .container {
+            max-width: 960px;
+            margin-left: auto;
+            margin-right: auto;
+            padding: 1.5rem;
+        }
 
-         .btn-primary:hover {
-             background-color: #18a680;
-             border-color: #18a680;
-             box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
-             transform: scale(1.02);
-         }
+        .mt-4 {
+            margin-top: 2rem !important;
+        }
 
-         .badge-danger, .alert-danger {
-             background-color: #f8d7da;
-             border-color: #f5c6cb;
-             color: #721c24;
-             font-weight: 600;
-             padding: 0.4rem 0.6rem;
-             border-radius: 0.25rem;
-         }
+        .footer {
+            margin-top: 3rem;
+            padding: 2rem 0;
+            text-align: center;
+            color: #6c757d;
+            border-top: 1px solid #dee2e6;
+        }
+    </style>
+</head>
 
-         .badge-success, .alert-success {
-             background-color: #d4edda;
-             border-color: #c3e6cb;
-             color: #155724;
-             font-weight: 600;
-             padding: 0.4rem 0.6rem;
-             border-radius: 0.25rem;
-         }
+<body>
+    <div class="container text-center mt-4">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="img-fluid" />
+        <h1 class="mt-3">CKD Prediction</h1>
+    </div>
 
-         .alert-info {
-             background-color: #e6fff7;
-             border-color: #b8f2e6;
-             color: #155724;
-             padding: 1rem;
-             border-radius: 0.3rem;
-         }
+    <!-- Prediction Form -->
+    <div class="container mt-2">
+        <form method="POST" action="/">
+            <!-- Input fields for CKD prediction -->
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="age">Age:</label>
+                        <input type="text" class="form-control" name="age" required>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="bp">Blood Pressure:</label>
+                        <input type="text" class="form-control" name="bp" required>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="sg">Specific Gravity:</label>
+                        <input type="text" class="form-control" name="sg" required>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="al">Albumin:</label>
+                        <input type="text" class="form-control" name="al" required>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="su">Sugar:</label>
+                        <input type="text" class="form-control" name="su" required>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="rbc">Red Blood Cells:</label>
+                        <input type="text" class="form-control" name="rbc" required>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="pc">Pus Cell:</label>
+                        <input type="text" class="form-control" name="pc" required>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="pcc">Pus Cell Clumping:</label>
+                        <input type="text" class="form-control" name="pcc" required>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="ba">Bacteria:</label>
+                        <input type="text" class="form-control" name="ba" required>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="bgr">Blood Glucose Random:</label>
+                        <input type="text" class="form-control" name="bgr" required>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="bu">Blood Urea:</label>
+                        <input type="text" class="form-control" name="bu" required>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="sc">Serum Creatinine:</label>
+                        <input type="text" class="form-control" name="sc" required>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="sod">Sodium:</label>
+                        <input type="text" class="form-control" name="sod" required>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="pot">Potassium:</label>
+                        <input type="text" class="form-control" name="pot" required>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="hemo">Hemoglobin:</label>
+                        <input type="text" class="form-control" name="hemo" required>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="pcv">Packed Cell Volume:</label>
+                        <input type="text" class="form-control" name="pcv" required>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="wbcc">White Blood Cell Count:</label>
+                        <input type="text" class="form-control" name="wbcc" required>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="rbcc">Red Blood Cell Count:</label>
+                        <input type="text" class="form-control" name="rbcc" required>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="htn">Hypertension:</label>
+                        <input type="text" class="form-control" name="htn" required>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="dm">Diabetes:</label>
+                        <input type="text" class="form-control" name="dm" required>
+                    </div>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Get Prediction</button>
+        </form>
+    </div>
+</body>
 
-         .table {
-             margin-top: 1.5rem;
-             margin-bottom: 0;
-             border-collapse: collapse;
-             width: 100%;
-         }
 
-         .table th, .table td {
-             padding: 0.75rem;
-             border-bottom: 1px solid #dee2e6;
-             text-align: left;
-         }
 
-         .table thead th {
-             background-color: #f2f2f2;
-             font-weight: 600;
-         }
+        <!-- Prediction Results -->
+        <div id="result" class="mt-4">
+            {% if predictions %}
+                <h2>Prediction Result:</h2>
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>Prediction</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Stacked Ensemble Learning</td>
+                            <td>{{ predictions['Stacked Ensemble Learning'] }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            {% endif %}
 
-         .table tbody tr:nth-child(even) {
-             background-color: #f9f9f9; /* Alternating row color */
-         }
+            {% if final_conclusion %}
+                <div class="alert alert-info mt-3">
+                    <h5 class="mb-0">
+                        Final Conclusion:&nbsp;
+                        {% if final_conclusion == 'CKD' %}
+                            <span class="badge badge-danger">{{ final_conclusion }}</span>
+                        {% else %}
+                            <span class="badge badge-success">{{ final_conclusion }}</span>
+                        {% endif %}
+                    </h5>
+                </div>
+            {% endif %}
+        </div>
+    </div>
 
-         /* Custom Styles for Layout */
-         .container {
-             max-width: 960px; /* Adjust as needed */
-             margin-left: auto;
-             margin-right: auto;
-             padding: 1.5rem;
-         }
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 Soham Kulkarni, Riddhi Poddar, Janhavi Doijad. Licensed under GNU-GPLv3.</p>
+        </div>
+    </footer>
 
-         .mt-4 {
-             margin-top: 2rem !important;
-         }
+    <!-- JavaScript -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
 
-         .mt-3 {
-             margin-top: 1rem !important; /* Reduced margin for the h1 */
-         }
-
-         .mt-2 {
-             opacity: 0;
-             transform: translateY(20px);
-             animation: fadeIn 0.5s ease-out 0.2s forwards;
-             margin-top: 0.5rem !important; /* Further reduced margin for form container */
-         }
-
-         @keyframes fadeIn {
-             from {
-                 opacity: 0;
-                 transform: translateY(20px);
-             }
-             to {
-                 opacity: 1;
-                 transform: translateY(0);
-             }
-         }
-
-         .text-center {
-             text-align: center !important;
-         }
-
-         /* Logo Styling */
-         img[alt="Logo"] {
-             display: block;
-             margin: 0 auto 1rem; /* Center logo with margin below */
-             height: auto !important; /* Ensure responsiveness */
-             max-height: 150px; /* Limit maximum height */
-         }
-
-         /* Form Row Spacing */
-         .row {
-             margin-bottom: 1.5rem;
-         }
-
-         /* Prediction Result Section */
-         #result h2 {
-             margin-top: 2rem;
-             margin-bottom: 1rem;
-         }
-
-         /* Footer Styling */
-         .footer {
-             margin-top: 3rem;
-             padding: 2rem 0;
-             text-align: center;
-             color: #6c757d;
-             border-top: 1px solid #dee2e6;
-         }
-     </style>
- </head>
-
- <body>
-     <div class="container text-center mt-4">
-         <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
-         <h1 class="mt-3">nefrikinoso: early stage CKD prediction</h1>
-     </div>
-
-     <div class="container mt-2">
-         <form method="POST" action="/">
-             <div class="row">
-                 {% for feature in feature_order %}
-                     {% if feature != 'stage' %}
-                         <div class="col-md-4">
-                             <div class="form-group">
-                                 {% set parts = display_names.get(feature, feature.replace('_', ' ').capitalize()).split('\n', 1) %}
-                                 <label for="{{ feature }}">
-                                     {{ parts[0] | safe }}
-                                     {% if parts|length > 1 %}
-                                         <span class="label-description">{{ parts[1] | safe }}</span>
-                                     {% endif %}
-                                 </label>
-                                 <input type="text" class="form-control" id="{{ feature }}" name="{{ feature }}" required>
-                             </div>
-                         </div>
-                     {% endif %}
-                 {% endfor %}
-             </div>
-             <button type="submit" class="btn btn-primary">Get Prediction</button>
-         </form>
-
-         <div id="result" class="mt-4">
-             {% if predictions %}
-                 <h2>Prediction Result:</h2>
-                 <table class="table table-bordered">
-                     <thead>
-                         <tr>
-                             <th>Model</th>
-                             <th>Prediction</th>
-                         </tr>
-                     </thead>
-                     <tbody>
-                         <tr>
-                             <td>Stacked Ensemble Learning</td>
-                             <td>{{ predictions['Stacked Ensemble Learning'] }}</td>
-                         </tr>
-                     </tbody>
-                 </table>
-             {% endif %}
-
-             {% if final_conclusion %}
-                 <div class="alert alert-info">
-                     <h5 class="mb-0">
-                         Final Conclusion:&nbsp;
-                         {% if final_conclusion == 'CKD' %}
-                             <span class="badge badge-danger">{{ final_conclusion }}</span>
-                         {% else %}
-                             <span class="badge badge-success">{{ final_conclusion }}</span>
-                         {% endif %}
-                     </h5>
-                 </div>
-             {% endif %}
-         </div>
-     </div>
-
-     <footer class="footer">
-         <div class="container">
-             <p>&copy; 2025 Soham Kulkarni, Riddhi Poddar, Janhavi Doijad. Licensed under GNU-GPLv3.</p>
-         </div>
-     </footer>
-
-     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
-     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-     <script>
-         const inputFields = document.querySelectorAll('.form-control');
-         const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
-         const originalLabelColor = '#495057';
-         const originalLabelWeight = '500';
-
-         inputFields.forEach(input => {
-             input.addEventListener('focus', () => {
-                 const label = document.querySelector(`label[for="${input.id}"]`);
-                 if (label) {
-                     label.style.fontWeight = '700'; // Make label bolder (increased boldness)
-                     label.style.color = primaryColor; // Change label color to primary
-                 }
-             });
-
-             input.addEventListener('blur', () => {
-                 const label = document.querySelector(`label[for="${input.id}"]`);
-                 if (label) {
-                     label.style.fontWeight = originalLabelWeight; // Revert to original font weight
-                     label.style.color = originalLabelColor; // Revert label color
-                 }
-             });
-         });
-     </script>
- </body>
-
- </html>
+</html>
