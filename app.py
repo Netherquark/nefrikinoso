@@ -9,12 +9,12 @@ def index():
     if request.method == 'POST':
         # Create a dictionary for user input
         user_input_dict = {
-            "age": float(request.form.get('age', 0)),  # Default to 0 if not provided
+            "age": float(request.form.get('age', 0)),
             "bp": float(request.form.get('bp', 0)),
             "sg": float(request.form.get('sg', 0)),
             "al": float(request.form.get('al', 0)),
             "su": float(request.form.get('su', 0)),
-            "rbc": request.form.get('rbc', ''),  # Default to empty string if not provided
+            "rbc": request.form.get('rbc', ''),
             "pc": request.form.get('pc', ''),
             "pcc": request.form.get('pcc', ''),
             "ba": request.form.get('ba', ''),
@@ -31,15 +31,22 @@ def index():
             "dm": request.form.get('dm', ''),
         }
 
-        # Call your prediction method
         prediction = model.predict_from_user_input_gui(user_input_dict)
-
-        # You can decide how the prediction is formatted: 
         result = "CKD Detected" if prediction == "CKD" else "No CKD Detected"
 
-        return render_template('index.html', predictions={'Stacked Ensemble Learning': result}, final_conclusion=prediction)
+        return render_template('index.html', user_input=user_input_dict, predictions={'Stacked Ensemble Learning': result}, final_conclusion=prediction)
 
-    return render_template('index.html')
+    # Default CKD-indicative values to prefill form
+    default_input = {
+        "age": 65, "bp": 80, "sg": 1.005, "al": 3, "su": 2,
+        "rbc": "abnormal", "pc": "abnormal", "pcc": "present", "ba": "present",
+        "bgr": 150, "bu": 60, "sc": 3.5, "sod": 140, "pot": 5.0,
+        "hemo": 9.5, "pcv": 30, "wbcc": 12000, "rbcc": 3.5,
+        "htn": "yes", "dm": "yes"
+    }
+
+    return render_template('index.html', user_input=default_input)
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
