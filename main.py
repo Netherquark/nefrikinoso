@@ -182,6 +182,11 @@ class CKDModelRunner:
         best_model_name = best_row["Model"]
         best_model = self.model_objects[best_model_name]
         print(f"\nBest model based on ROC AUC: {best_model_name}")
+
+        # Save the best model to a pickle file
+        with open("best_model.pkl", "wb") as f:
+            pickle.dump(best_model, f)
+        
         return best_model_name, best_model
 
     def predict_from_user_input(self, model):
@@ -191,10 +196,15 @@ class CKDModelRunner:
         print(f"\nPrediction Result: The patient is predicted to have **{prediction}**.")
         
     def predict_from_user_input_gui(self, user_input_dict):
-        self.run_all_models()
-        self.save_roc_auc()
-        model, best_model = self.get_best_model()
-        predictor = CKDPredictor(best_model, self.feature_order)
+        # Load best model from pickle
+        with open("best_model.pkl", "rb") as f:
+            best_model = pickle.load(f)
+
+        # Load feature order from JSON
+        with open("feature_order.json", "r") as f:
+            feature_order = json.load(f)
+
+        predictor = CKDPredictor(model=best_model, feature_order=feature_order)
         prediction = predictor.predict_from_input_dict(user_input_dict)
         return prediction
 
