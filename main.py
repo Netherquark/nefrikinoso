@@ -183,11 +183,11 @@ class CKDModelRunner:
         best_model = self.model_objects[best_model_name]
         print(f"\nBest model based on ROC AUC: {best_model_name}")
 
-        # Save the best model to a pickle file
-        with open("best_model.pkl", "wb") as f:
-            pickle.dump(best_model, f)
-        
-        return best_model_name, best_model
+        # Save the best model
+        with open(self.best_model_path, 'wb') as f:
+            pickle.dump(self.model_objects[best_model_name], f)
+
+        print(f"Best model '{best_model_name}' saved to {self.best_model_path}")
 
     def predict_from_user_input(self, model):
         predictor = CKDPredictor(model, self.feature_order)
@@ -196,18 +196,29 @@ class CKDModelRunner:
         print(f"\nPrediction Result: The patient is predicted to have **{prediction}**.")
         
     def predict_from_user_input_gui(self, user_input_dict):
-        # Load best model from pickle
-        with open("best_model.pkl", "rb") as f:
-            best_model = pickle.load(f)
+        """
+        Predicts CKD based on user input from the GUI.
+        """
+        # Load the trained model using the correct path
+        try:
+            with open(self.best_model_path, "rb") as f:
+                model = pickle.load(f)
+        except FileNotFoundError:
+            print(f"Error: Model file not found at {self.best_model_path}")
+            # If the model doesn't exist, train and save a new one.
+            print("Training a new model as it was not found...")
+            self.run_models()
+            with open(self.best_model_path, "rb") as f:
+                model = pickle.load(f)
 
-        # Load feature order from JSON
-        with open("feature_order.json", "r") as f:
-            feature_order = json.load(f)
+        # Create a DataFrame from the user input
+        user_df = pd.DataFrame([user_input_dict])
 
-        predictor = CKDPredictor(model=best_model, feature_order=feature_order)
-        prediction = predictor.predict_from_input_dict(user_input_dict)
-        return prediction
+        # Predict using the loaded model
+        predictions = model.predict(user_df)
 
+        # In a real scenario, you would process the predictions and map them to meaningful labels
+        return predictions.tolist()  # or any other processing
 
     def run(self):
         self.run_all_models()

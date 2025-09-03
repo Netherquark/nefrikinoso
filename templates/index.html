@@ -4,25 +4,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>Nefirkinoso</title>
+    <title>Nefrikinoso - CKD Prediction</title>
 
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
-
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
 
     <style>
-        /* Color Palette */
         :root {
             --primary-color: #20c997;
             --secondary-color: #f8f9fa;
             --accent-color: #28a745;
             --text-dark: #343a40;
             --heading-dark: #212529;
-            --border-color: #ced4da;
+            --border-color: #dee2e6;
+            --danger-color: #dc3545;
+            --success-color: #28a745;
         }
 
         body {
@@ -32,62 +31,27 @@
             line-height: 1.6;
         }
 
-        h1, h2, h3, h4, h5, h6 {
+        h1,
+        h2,
+        h3 {
             font-weight: 700;
             color: var(--heading-dark);
-            margin-bottom: 0.75rem;
-        }
-
-        h1 {
-            font-size: 2.5rem;
-        }
-
-        label {
-            font-weight: 500;
-            color: #495057;
-            margin-bottom: 0.3rem;
-            display: block;
-        }
-
-        .form-control {
-            font-size: 1rem;
-            padding: 0.75rem 1rem;
-            border-radius: 0.3rem;
-            border: 1px solid var(--border-color);
-        }
-
-        .form-control:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0.75rem rgba(32, 201, 151, 0.7);
-            border-width: 1.5px;
         }
 
         .btn-primary {
             background-color: var(--primary-color);
             border-color: var(--primary-color);
-            color: #fff;
             font-weight: 600;
-            padding: 0.8rem 1.5rem;
-            border-radius: 0.3rem;
-            transition: background-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease-in-out;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
         }
 
         .btn-primary:hover {
             background-color: #18a680;
             border-color: #18a680;
-            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
-            transform: scale(1.02);
         }
 
         .container {
             max-width: 960px;
-            margin-left: auto;
-            margin-right: auto;
-            padding: 1.5rem;
-        }
-
-        .mt-4 {
-            margin-top: 2rem !important;
         }
 
         .footer {
@@ -95,183 +59,100 @@
             padding: 2rem 0;
             text-align: center;
             color: #6c757d;
-            border-top: 1px solid #dee2e6;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .upload-card {
+            border: 2px dashed var(--primary-color);
+            border-radius: 0.5rem;
+            padding: 3rem;
+            text-align: center;
+            background-color: #fff;
+            transition: background-color 0.3s;
+        }
+
+        .upload-card:hover {
+            background-color: #f1fef9;
+        }
+
+        .result-card {
+            border-left-width: 5px;
+            border-left-style: solid;
+        }
+
+        .result-card.ckd {
+            border-left-color: var(--danger-color);
+        }
+
+        .result-card.no-ckd {
+            border-left-color: var(--success-color);
+        }
+
+        .result-card.error {
+            border-left-color: #ffc107;
         }
     </style>
 </head>
 
 <body>
     <div class="container text-center mt-4">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="img-fluid mt-3" style="max-width: 240px; height: auto;" />
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="img-fluid" style="max-width: 180px;" />
         <h1 class="mt-3">Nefrikinoso</h1>
+        <p class="lead">AI-Powered Chronic Kidney Disease (CKD) Prediction from Medical Reports</p>
     </div>
 
-    <!-- Prediction Form -->
-    <div class="container mt-2">
-        <form method="POST" action="/">
-            <!-- Input fields for CKD prediction -->
-            <div class="row">
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label for="age">Age:</label>
-                        <input type="number" class="form-control" name="age" value="{{ user_input.age }}" required>
+    <!-- PDF Upload Form -->
+    <div class="container mt-4">
+        <form method="POST" action="/" enctype="multipart/form-data">
+            <div class="card upload-card">
+                <div class="card-body">
+                    <h3 class="card-title">Upload Medical Reports</h3>
+                    <p class="text-muted">Select one or more PDF files for analysis.</p>
+                    <div class="form-group mt-4">
+                        <input type="file" class="form-control-file" name="pdf_files" id="pdf_files" accept=".pdf"
+                            multiple required>
                     </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label for="bp">Blood Pressure:</label>
-                        <input type="number" class="form-control" name="bp" value="{{ user_input.bp }}" required>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label for="sg">Specific Gravity:</label>
-                        <input type="number" step="0.001" class="form-control" name="sg" value="{{ user_input.sg }}" required>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label for="al">Albumin:</label>
-                        <input type="number" class="form-control" name="al" value="{{ user_input.al }}" required>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label for="su">Sugar:</label>
-                        <input type="number" class="form-control" name="su" value="{{ user_input.su }}" required>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label for="rbc">Red Blood Cells:</label>
-                        <input type="text" class="form-control" name="rbc" value="{{ user_input.rbc }}" required>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label for="pc">Pus Cell:</label>
-                        <input type="text" class="form-control" name="pc" value="{{ user_input.pc }}" required>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label for="pcc">Pus Cell Clumping:</label>
-                        <input type="text" class="form-control" name="pcc" value="{{ user_input.pcc }}" required>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label for="ba">Bacteria:</label>
-                        <input type="text" class="form-control" name="ba" value="{{ user_input.ba }}" required>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label for="bgr">Blood Glucose Random:</label>
-                        <input type="text" class="form-control" name="bgr" value="{{ user_input.bgr }}" required>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label for="bu">Blood Urea:</label>
-                        <input type="text" class="form-control" name="bu" value="{{ user_input.bu }}" required>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label for="sc">Serum Creatinine:</label>
-                        <input type="text" class="form-control" name="sc" value="{{ user_input.sc }}" required>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label for="sod">Sodium:</label>
-                        <input type="text" class="form-control" name="sod" value="{{ user_input.sod }}" required>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label for="pot">Potassium:</label>
-                        <input type="text" class="form-control" name="pot" value="{{ user_input.pot }}" required>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label for="hemo">Hemoglobin:</label>
-                        <input type="text" class="form-control" name="hemo" value="{{ user_input.hemo }}" required>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label for="pcv">Packed Cell Volume:</label>
-                        <input type="text" class="form-control" name="pcv" value="{{ user_input.pcv }}" required>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label for="wbcc">White Blood Cell Count:</label>
-                        <input type="text" class="form-control" name="wbcc" value="{{ user_input.wbcc }}" required>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label for="rbcc">Red Blood Cell Count:</label>
-                        <input type="text" class="form-control" name="rbcc" value="{{ user_input.rbcc }}" required>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label for="htn">Hypertension:</label>
-                        <input type="text" class="form-control" name="htn" value="{{ user_input.htn }}" required>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label for="dm">Diabetes:</label>
-                        <input type="text" class="form-control" name="dm" value="{{ user_input.dm }}" required>
-                    </div>
+                    <button type="submit" class="btn btn-primary btn-lg mt-3">Get Predictions</button>
                 </div>
             </div>
-            <button type="submit" class="btn btn-primary">Get Prediction</button>
         </form>
     </div>
-</body>
 
+    <!-- Prediction Results -->
+    <div class="container mt-5">
+        {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
 
-
-        <!-- Prediction Results -->
-        <div id="result" class="mt-4">
-            {% if predictions %}
-                <h2>Prediction Result:</h2>
-                <table class="table table-bordered">
-                    <thead>
-                        <tr>
-                            <th>Model</th>
-                            <th>Prediction</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Stacked Ensemble Learning</td>
-                            <td>{{ predictions['Stacked Ensemble Learning'] }}</td>
-                        </tr>
-                    </tbody>
-                </table>
-            {% endif %}
-
-            {% if final_conclusion %}
-                <div class="alert alert-info mt-3">
-                    <h5 class="mb-0">
-                        Final Conclusion:&nbsp;
-                        {% if final_conclusion == 'CKD' %}
-                            <span class="badge badge-danger">{{ final_conclusion }}</span>
-                        {% else %}
-                            <span class="badge badge-success">{{ final_conclusion }}</span>
-                        {% endif %}
-                    </h5>
-                </div>
-            {% endif %}
+        {% if predictions %}
+        <h2>Analysis Results</h2>
+        {% for result in predictions %}
+        <div class="card mb-3 result-card {% if result.conclusion == 'CKD' %}ckd{% elif result.conclusion == 'notckd' %}no-ckd{% else %}error{% endif %}">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong>{{ result.filename }}</strong>
+                {% if result.conclusion == 'CKD' %}
+                <span class="badge badge-danger">CKD Detected</span>
+                {% elif result.conclusion == 'notckd' %}
+                <span class="badge badge-success">No CKD Detected</span>
+                {% else %}
+                <span class="badge badge-warning">Processing Error</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if result.error %}
+                <p class="card-text text-danger"><strong>Error:</strong> {{ result.error }}</p>
+                {% else %}
+                <p class="card-text">The model's prediction based on the extracted data is complete.</p>
+                <!-- Optional: Display extracted data if needed -->
+                <!-- 
+                            <h6>Extracted Data:</h6>
+                            <pre><code>{{ result.data | tojson(indent=2) }}</code></pre> 
+                            -->
+                {% endif %}
+            </div>
         </div>
+        {% endfor %}
+        {% endif %}
     </div>
 
     <!-- Footer -->
@@ -281,7 +162,6 @@
         </div>
     </footer>
 
-    <!-- JavaScript -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
