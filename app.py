@@ -10,7 +10,7 @@ from main import CKDModelRunner
 # IMPORTANT: Add your Gemini API key here.
 # It is highly recommended to use environment variables for security.
 # For example: genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-GEMINI_API_KEY = "AIzaSyCzw04cD5WQiOeZbPLzEu5wiUtgLW5nJhs"
+GEMINI_API_KEY = "ADD_YOUR_GEMINI_API_KEY_HERE"
 try:
     genai.configure(api_key=GEMINI_API_KEY)
 except Exception as e:
